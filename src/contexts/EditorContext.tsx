@@ -36,6 +36,10 @@ interface EditorContextValue {
   previewHighlight: CharacterHighlight | null;
   setEditorHighlight: (highlight: CharacterHighlight | null) => void;
   setPreviewHighlight: (highlight: CharacterHighlight | null) => void;
+  
+  // Real-time cursor position tracking (editor cursor → preview indicator)
+  editorCursorPosition: number | null;
+  setEditorCursorPosition: (pos: number | null) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -52,6 +56,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   // Highlight state for both panels (character-based)
   const [editorHighlight, setEditorHighlight] = useState<CharacterHighlight | null>(null);
   const [previewHighlight, setPreviewHighlight] = useState<CharacterHighlight | null>(null);
+  
+  // Real-time cursor position from editor
+  const [editorCursorPosition, setEditorCursorPosition] = useState<number | null>(null);
 
   const syncScroll = useCallback((source: HTMLElement | null, target: HTMLElement | null) => {
     if (!scrollSyncEnabled || isScrollingRef.current || !source || !target) return;
@@ -207,6 +214,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         previewHighlight,
         setEditorHighlight,
         setPreviewHighlight,
+        editorCursorPosition,
+        setEditorCursorPosition,
       }}
     >
       {children}

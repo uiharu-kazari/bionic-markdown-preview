@@ -43,6 +43,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     navigateToPreviewChar,
     editorHighlight,
     setPreviewHighlight,
+    setEditorCursorPosition,
   } = useEditorContext();
   const { t } = useLanguage();
 
@@ -97,25 +98,28 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     navigateToPreviewChar(charPos);
   }, [value, navigateToPreviewChar]);
 
-  // Handle selection change to highlight corresponding text in preview (character-based)
+  // Handle selection/cursor change to update preview highlight and cursor indicator
   const handleSelectionChange = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea || document.activeElement !== textarea) return;
 
     const { selectionStart, selectionEnd } = textarea;
     
+    // Always update cursor position for the preview indicator
+    setEditorCursorPosition(selectionStart);
+    
     if (selectionStart === selectionEnd) {
-      // No selection, clear highlight
+      // No selection (just cursor), clear highlight but keep cursor indicator
       setPreviewHighlight(null);
       return;
     }
 
-    // Set character-based highlight
+    // Set character-based highlight for selection
     setPreviewHighlight({
       charStart: selectionStart,
       charEnd: selectionEnd,
     });
-  }, [setPreviewHighlight]);
+  }, [setPreviewHighlight, setEditorCursorPosition]);
 
   // Register refs with context
   useEffect(() => {
@@ -125,25 +129,35 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     }
   }, [editorScrollRef, editorTextareaRef]);
 
-  // Listen for selection changes
+  // Listen for selection changes, keyup, and clicks for better cursor tracking
   useEffect(() => {
     const handleSelect = () => handleSelectionChange();
+    const textarea = textareaRef.current;
+    
     document.addEventListener('selectionchange', handleSelect);
-    return () => document.removeEventListener('selectionchange', handleSelect);
+    textarea?.addEventListener('keyup', handleSelect);
+    textarea?.addEventListener('click', handleSelect);
+    
+    return () => {
+      document.removeEventListener('selectionchange', handleSelect);
+      textarea?.removeEventListener('keyup', handleSelect);
+      textarea?.removeEventListener('click', handleSelect);
+    };
   }, [handleSelectionChange]);
 
-  // Clear preview highlight when focus leaves editor
+  // Clear preview highlight and cursor when focus leaves editor
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const handleBlur = () => {
       setPreviewHighlight(null);
+      setEditorCursorPosition(null);
     };
 
     textarea.addEventListener('blur', handleBlur);
     return () => textarea.removeEventListener('blur', handleBlur);
-  }, [setPreviewHighlight]);
+  }, [setPreviewHighlight, setEditorCursorPosition]);
 
   const lineCount = value.split('\n').length;
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);

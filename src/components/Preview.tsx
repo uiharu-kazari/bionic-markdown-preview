@@ -7,6 +7,7 @@ import {
   HIGHLIGHT_CLASS,
   SOURCE_CHAR_START_ATTR,
   SOURCE_CHAR_END_ATTR,
+  getPreviewElementsForCharRange,
 } from '../utils/sourceMapping';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -51,6 +52,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview,
     navigateToEditorChar,
     previewHighlight,
+    editorCursorPosition,
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -168,6 +170,33 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
   }, [previewHighlight, processedHtml]);
 
+  // Show cursor indicator at editor cursor position
+  const CURSOR_INDICATOR_CLASS = 'preview-cursor-indicator';
+  
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    // Remove existing cursor indicators
+    articleRef.current.querySelectorAll(`.${CURSOR_INDICATOR_CLASS}`).forEach((el) => {
+      el.classList.remove(CURSOR_INDICATOR_CLASS);
+    });
+
+    // Add cursor indicator if we have a cursor position and no selection highlight
+    if (editorCursorPosition !== null && !previewHighlight) {
+      // Find elements that contain the cursor position
+      const elements = getPreviewElementsForCharRange(
+        articleRef.current, 
+        editorCursorPosition, 
+        editorCursorPosition + 1
+      );
+      
+      // Mark the most specific (smallest range) element
+      if (elements.length > 0) {
+        elements[0].classList.add(CURSOR_INDICATOR_CLASS);
+      }
+    }
+  }, [editorCursorPosition, previewHighlight, processedHtml]);
+
   const handleCopyHtml = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(processedHtml);
@@ -239,6 +268,23 @@ ${processedHtml}
         .dark .${HIGHLIGHT_CLASS} {
           background-color: rgba(16, 185, 129, 0.2) !important;
           outline-color: rgba(16, 185, 129, 0.5);
+        }
+        .preview-cursor-indicator {
+          position: relative;
+          background-color: rgba(59, 130, 246, 0.12) !important;
+          border-left: 3px solid rgba(59, 130, 246, 0.8);
+          padding-left: 4px !important;
+          margin-left: -4px;
+          border-radius: 2px;
+          animation: cursorPulse 1.2s ease-in-out infinite;
+        }
+        .dark .preview-cursor-indicator {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+          border-left-color: rgba(96, 165, 250, 0.9);
+        }
+        @keyframes cursorPulse {
+          0%, 100% { opacity: 1; border-left-color: rgba(59, 130, 246, 0.8); }
+          50% { opacity: 0.7; border-left-color: rgba(59, 130, 246, 0.5); }
         }
         [data-source-line], [${SOURCE_CHAR_START_ATTR}] {
           cursor: pointer;
