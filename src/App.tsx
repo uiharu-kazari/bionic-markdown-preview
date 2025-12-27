@@ -17,7 +17,7 @@ const DEFAULT_BIONIC_OPTIONS: BionicOptions = {
   fixationPoint: 3,
   highlightTag: 'b',
   highlightClass: '',
-  dimOpacity: 80,
+  dimOpacity: 62,
 };
 
 const DEFAULT_GRADIENT_OPTIONS: GradientOptions = {
