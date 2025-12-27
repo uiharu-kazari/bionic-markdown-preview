@@ -650,18 +650,34 @@ export function insertCursorAtPosition(
   let targetStart = 0;
   let targetEnd = 0;
 
-  // Find the most specific (smallest range) element containing the position
-  let smallestRange = Infinity;
+  // Find the best element for cursor placement
+  // Priority: 1) cursor inside element, 2) cursor at element end, 3) cursor at element start
+  let bestScore = -Infinity;
   
   elements.forEach((el) => {
     const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
     const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+    
+    if (elStart === -1 || elEnd === -1) return;
 
-    // Check if this element contains the cursor position
+    // Check if this element contains or touches the cursor position
     if (sourceCharPos >= elStart && sourceCharPos <= elEnd) {
       const range = elEnd - elStart;
-      if (range < smallestRange) {
-        smallestRange = range;
+      
+      // Calculate score: prefer elements where cursor is at end or inside, not at start
+      // Also prefer smaller (more specific) elements
+      let score = 1000 / Math.max(1, range); // Smaller range = higher score
+      
+      if (sourceCharPos === elStart && sourceCharPos !== elEnd) {
+        // Cursor at very start of element - lower priority
+        score -= 500;
+      } else if (sourceCharPos === elEnd) {
+        // Cursor at end of element - higher priority
+        score += 100;
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
         targetElement = el;
         targetStart = elStart;
         targetEnd = elEnd;
@@ -675,6 +691,9 @@ export function insertCursorAtPosition(
   const sourceOffset = sourceCharPos - targetStart;
   const sourceLength = targetEnd - targetStart;
   
+  // Special case: cursor at end of element - place after last text
+  const cursorAtEnd = sourceCharPos === targetEnd;
+  
   // Walk through text nodes to find where to insert cursor
   const walker = document.createTreeWalker(
     targetElement,
@@ -684,11 +703,13 @@ export function insertCursorAtPosition(
 
   let currentOffset = 0;
   let textNode: Text | null = null;
+  let lastTextNode: Text | null = null;
   let insertOffset = 0;
 
   while (walker.nextNode()) {
     const node = walker.currentNode as Text;
     const nodeLength = node.textContent?.length || 0;
+    lastTextNode = node;
     
     // Calculate proportional position
     const nodeStartRatio = currentOffset / Math.max(1, sourceLength);
@@ -706,16 +727,26 @@ export function insertCursorAtPosition(
     currentOffset += nodeLength;
   }
 
+  // If cursor is at end and no text node matched, use last text node at its end
+  if (!textNode && cursorAtEnd && lastTextNode) {
+    textNode = lastTextNode;
+    insertOffset = lastTextNode.textContent?.length || 0;
+  }
+
   // If no text node found, try to append to the element
   if (!textNode) {
     const firstTextNode = targetElement.firstChild;
     if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
       textNode = firstTextNode as Text;
-      insertOffset = 0;
+      insertOffset = cursorAtEnd ? (firstTextNode.textContent?.length || 0) : 0;
     } else {
-      // Create cursor at the start of the element
+      // Create cursor at the start/end of the element
       const cursor = createCursorElement();
-      targetElement.insertBefore(cursor, targetElement.firstChild);
+      if (cursorAtEnd) {
+        targetElement.appendChild(cursor);
+      } else {
+        targetElement.insertBefore(cursor, targetElement.firstChild);
+      }
       return true;
     }
   }
