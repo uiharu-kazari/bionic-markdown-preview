@@ -154,24 +154,27 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
   }, [previewHighlight, processedHtml]);
 
-  // Show precise cursor at editor cursor position
+  // Show cursor at editor cursor position
+  // Only shows inline cursor when position maps precisely to text content
+  // Empty lines and block boundaries simply don't show a cursor (architectural limitation)
   useEffect(() => {
     if (!articleRef.current) return;
 
     // Remove existing cursor
     removeCursor(articleRef.current);
 
-    // Insert cursor if we have a position and no selection highlight
+    // Insert cursor only if we have a position and no selection highlight
     if (editorCursorPosition !== null && !previewHighlight) {
-      // Small delay to ensure DOM is updated after Bionic processing
       requestAnimationFrame(() => {
         if (articleRef.current) {
+          // Try to insert inline cursor - if position doesn't map to text,
+          // cursor simply won't appear (this is acceptable for empty lines)
           insertCursorAtPosition(articleRef.current, editorCursorPosition);
         }
       });
     }
     
-    // Cleanup on unmount or when position changes
+    // Cleanup
     return () => {
       if (articleRef.current) {
         removeCursor(articleRef.current);

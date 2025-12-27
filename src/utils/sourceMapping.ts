@@ -636,6 +636,9 @@ export const CURSOR_ELEMENT_ID = 'preview-cursor-marker';
 /**
  * Insert a blinking cursor element at the precise character position in the preview.
  * Returns true if cursor was successfully inserted.
+ * 
+ * Note: Only shows cursor when position is INSIDE actual text content.
+ * Empty lines and positions between blocks won't show a cursor (architectural limitation).
  */
 export function insertCursorAtPosition(
   previewRoot: Element,
@@ -644,36 +647,38 @@ export function insertCursorAtPosition(
   // Remove any existing cursor
   removeCursor(previewRoot);
 
-  // Find the span containing this character position
-  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
+  // Find ONLY inline text spans (not block elements) containing this position
+  // Block elements have ranges that include structural whitespace, causing misplacement
+  const textSpans = previewRoot.querySelectorAll(`span[${SOURCE_CHAR_START_ATTR}]`);
   let targetElement: Element | null = null;
   let targetStart = 0;
   let targetEnd = 0;
 
-  // Find the best element for cursor placement
-  // Priority: 1) cursor inside element, 2) cursor at element end, 3) cursor at element start
+  // Find text span where cursor is STRICTLY INSIDE (not at boundaries)
   let bestScore = -Infinity;
   
-  elements.forEach((el) => {
+  textSpans.forEach((el) => {
     const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
     const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
     
     if (elStart === -1 || elEnd === -1) return;
+    if (elEnd <= elStart) return; // Skip empty spans
 
-    // Check if this element contains or touches the cursor position
+    // Check if cursor is INSIDE this text span (not just at boundary)
     if (sourceCharPos >= elStart && sourceCharPos <= elEnd) {
       const range = elEnd - elStart;
       
-      // Calculate score: prefer elements where cursor is at end or inside, not at start
-      // Also prefer smaller (more specific) elements
-      let score = 1000 / Math.max(1, range); // Smaller range = higher score
+      // Calculate score: prefer smaller (more specific) spans
+      let score = 1000 / Math.max(1, range);
       
-      if (sourceCharPos === elStart && sourceCharPos !== elEnd) {
-        // Cursor at very start of element - lower priority
-        score -= 500;
-      } else if (sourceCharPos === elEnd) {
-        // Cursor at end of element - higher priority
-        score += 100;
+      // Strong preference for cursor being inside, not at exact boundaries
+      if (sourceCharPos > elStart && sourceCharPos < elEnd) {
+        score += 200; // Strictly inside - best case
+      } else if (sourceCharPos === elEnd && range > 0) {
+        score += 50; // At end - acceptable
+      } else if (sourceCharPos === elStart) {
+        // At very start - only use if nothing better
+        score -= 100;
       }
       
       if (score > bestScore) {
@@ -685,6 +690,8 @@ export function insertCursorAtPosition(
     }
   });
 
+  // If no text span found, cursor is at unmapped position (empty line, between blocks)
+  // Don't show cursor - this is an architectural limitation
   if (!targetElement) return false;
 
   // Calculate the offset within this element's text
