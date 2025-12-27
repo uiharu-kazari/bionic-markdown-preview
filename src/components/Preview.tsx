@@ -4,6 +4,7 @@ import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
 import { 
   getCharacterPositionFromClick, 
+  getSelectionSourceRange,
   SOURCE_CHAR_START_ATTR,
   insertCursorAtPosition,
   removeCursor,
@@ -55,6 +56,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     navigateToEditorChar,
     previewHighlight,
     editorCursorPosition,
+    setEditorSelection,
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -119,19 +121,35 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
-  // Handle click on preview to navigate to editor (character-precise)
-  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+  // Handle mouse interactions on preview
+  // - Click (no selection) → navigate to cursor position in editor  
+  // - Selection (mousedown + drag + mouseup) → sync selection to editor
+  const handlePreviewMouseUp = useCallback((e: React.MouseEvent) => {
+    if (!articleRef.current) return;
+    
     const target = e.target as Element;
     
     // Don't handle clicks on links
     if (target.tagName === 'A' || target.closest('a')) return;
     
-    // Try character-precise positioning first
-    const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current!);
-    if (charPos) {
-      navigateToEditorChar(charPos.sourceStart);
+    // Check if there's a selection
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().length > 0) {
+      // User made a selection - sync to editor
+      const selectionRange = getSelectionSourceRange(articleRef.current);
+      if (selectionRange && selectionRange.sourceStart !== selectionRange.sourceEnd) {
+        setEditorSelection(selectionRange.sourceStart, selectionRange.sourceEnd);
+        // Clear the preview selection after syncing
+        selection.removeAllRanges();
+      }
+    } else {
+      // Simple click - navigate to cursor position
+      const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
+      if (charPos) {
+        navigateToEditorChar(charPos.sourceStart);
+      }
     }
-  }, [navigateToEditorChar]);
+  }, [navigateToEditorChar, setEditorSelection]);
 
   // Apply character-level selection highlighting
   useEffect(() => {
@@ -342,7 +360,7 @@ ${processedHtml}
       >
         <article
           ref={articleRef}
-          onClick={handlePreviewClick}
+          onMouseUp={handlePreviewMouseUp}
           className="prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
           style={{
             fontSize: `${settings.fontSize}px`,

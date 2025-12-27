@@ -368,6 +368,109 @@ function stripMarkdownSyntax(text: string): { text: string; offsetMap: number[] 
 }
 
 /**
+ * Get the source character range from the browser's current selection within the preview.
+ * Returns null if selection is not within the preview or no source mapping found.
+ */
+export function getSelectionSourceRange(
+  previewRoot: Element
+): { sourceStart: number; sourceEnd: number } | null {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  
+  // Check if selection is within the preview
+  if (!previewRoot.contains(range.commonAncestorContainer)) {
+    return null;
+  }
+
+  // Find source positions for start and end of selection
+  const startPos = getSourcePositionFromNode(range.startContainer, range.startOffset, previewRoot, false);
+  const endPos = getSourcePositionFromNode(range.endContainer, range.endOffset, previewRoot, true);
+
+  if (startPos === null || endPos === null) {
+    return null;
+  }
+
+  // Ensure start < end
+  const sourceStart = Math.min(startPos, endPos);
+  const sourceEnd = Math.max(startPos, endPos);
+
+  return { sourceStart, sourceEnd };
+}
+
+/**
+ * Get source character position from a DOM node and offset within the preview.
+ * @param isEndPosition - If true, we want the end position (for selection end)
+ */
+function getSourcePositionFromNode(
+  node: Node,
+  offset: number,
+  previewRoot: Element,
+  isEndPosition = false
+): number | null {
+  // If node is an element and offset refers to child index
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const children = el.childNodes;
+    
+    // If selecting at a child position, get that child's source info
+    if (offset < children.length) {
+      const targetChild = children[offset];
+      if (targetChild) {
+        return getSourcePositionFromNode(targetChild, 0, previewRoot, isEndPosition);
+      }
+    } else if (children.length > 0) {
+      // Offset beyond last child - get end of last child
+      const lastChild = children[children.length - 1];
+      if (lastChild.nodeType === Node.ELEMENT_NODE) {
+        const lastEl = lastChild as Element;
+        const endAttr = lastEl.getAttribute(SOURCE_CHAR_END_ATTR);
+        if (endAttr !== null) {
+          return parseInt(endAttr, 10);
+        }
+      }
+    }
+  }
+  
+  // Find nearest element with source position data
+  let current: Node | null = node;
+  
+  while (current && current !== previewRoot) {
+    if (current.nodeType === Node.ELEMENT_NODE) {
+      const el = current as Element;
+      const startAttr = el.getAttribute(SOURCE_CHAR_START_ATTR);
+      const endAttr = el.getAttribute(SOURCE_CHAR_END_ATTR);
+      
+      if (startAttr !== null && endAttr !== null) {
+        const start = parseInt(startAttr, 10);
+        const end = parseInt(endAttr, 10);
+        
+        // If original node was text, calculate precise position
+        if (node.nodeType === Node.TEXT_NODE) {
+          const textContent = node.textContent || '';
+          const textLen = textContent.length;
+          const sourceLen = end - start;
+          
+          if (textLen > 0) {
+            const ratio = offset / textLen;
+            return Math.round(start + (sourceLen * ratio));
+          }
+        }
+        
+        // Return end position if requested, otherwise start
+        return isEndPosition ? end : start;
+      }
+    }
+    current = current.parentNode;
+  }
+  
+  return null;
+}
+
+/**
  * Get character position from a click event in the preview.
  * Uses caretPositionFromPoint/caretRangeFromPoint for character-precise positioning.
  */

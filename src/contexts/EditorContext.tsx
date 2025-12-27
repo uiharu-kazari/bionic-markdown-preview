@@ -40,6 +40,9 @@ interface EditorContextValue {
   // Real-time cursor position tracking (editor cursor → preview indicator)
   editorCursorPosition: number | null;
   setEditorCursorPosition: (pos: number | null) => void;
+  
+  // Set selection in editor (for preview → editor sync)
+  setEditorSelection: (start: number, end: number) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -59,6 +62,35 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   
   // Real-time cursor position from editor
   const [editorCursorPosition, setEditorCursorPosition] = useState<number | null>(null);
+
+  // Set selection in editor (for preview → editor sync)
+  const setEditorSelection = useCallback((start: number, end: number) => {
+    const textarea = editorTextareaRef.current;
+    if (!textarea) return;
+
+    const text = textarea.value;
+    const clampedStart = Math.max(0, Math.min(start, text.length));
+    const clampedEnd = Math.max(0, Math.min(end, text.length));
+
+    // Calculate scroll position for the selection start
+    const line = getLineFromPosition(text, clampedStart);
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
+                       parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
+    const scrollTop = (line - 1) * lineHeight - textarea.clientHeight / 3;
+
+    textarea.scrollTo({
+      top: Math.max(0, scrollTop),
+      behavior: 'smooth',
+    });
+
+    // Focus and set selection
+    textarea.focus();
+    textarea.setSelectionRange(clampedStart, clampedEnd);
+
+    // Highlight the selection in editor
+    setEditorHighlight({ charStart: clampedStart, charEnd: clampedEnd });
+    setTimeout(() => setEditorHighlight(null), 1500);
+  }, []);
 
   const syncScroll = useCallback((source: HTMLElement | null, target: HTMLElement | null) => {
     if (!scrollSyncEnabled || isScrollingRef.current || !source || !target) return;
@@ -216,6 +248,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         setPreviewHighlight,
         editorCursorPosition,
         setEditorCursorPosition,
+        setEditorSelection,
       }}
     >
       {children}
