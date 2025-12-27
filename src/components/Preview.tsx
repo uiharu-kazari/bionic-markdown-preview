@@ -2,7 +2,12 @@ import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { Copy, Download, Eye, EyeOff } from 'lucide-react';
 import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
-import { getSourceLineForElement, HIGHLIGHT_CLASS } from '../utils/sourceMapping';
+import { 
+  getCharacterPositionFromClick, 
+  HIGHLIGHT_CLASS,
+  SOURCE_CHAR_START_ATTR,
+  SOURCE_CHAR_END_ATTR,
+} from '../utils/sourceMapping';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
@@ -44,7 +49,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     previewScrollRef, 
     previewArticleRef,
     syncScrollFromPreview,
-    navigateToEditorLine,
+    navigateToEditorChar,
     previewHighlight,
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
@@ -110,20 +115,21 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
-  // Handle click on preview to navigate to editor
+  // Handle click on preview to navigate to editor (character-precise)
   const handlePreviewClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as Element;
     
     // Don't handle clicks on links
     if (target.tagName === 'A' || target.closest('a')) return;
     
-    const lineInfo = getSourceLineForElement(target);
-    if (lineInfo) {
-      navigateToEditorLine(lineInfo.start);
+    // Try character-precise positioning first
+    const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current!);
+    if (charPos) {
+      navigateToEditorChar(charPos.sourceStart);
     }
-  }, [navigateToEditorLine]);
+  }, [navigateToEditorChar]);
 
-  // Apply highlight classes based on previewHighlight state
+  // Apply highlight classes based on previewHighlight state (character-based)
   useEffect(() => {
     if (!articleRef.current) return;
 
@@ -134,15 +140,29 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
 
     // Apply new highlights if any
     if (previewHighlight) {
-      const elements = articleRef.current.querySelectorAll('[data-source-line]');
+      // Query elements with character position data
+      const elementsWithCharPos = articleRef.current.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
       
-      elements.forEach((el) => {
-        const elStart = parseInt(el.getAttribute('data-source-line') || '-1', 10);
-        const elEnd = parseInt(el.getAttribute('data-source-line-end') || '-1', 10);
+      elementsWithCharPos.forEach((el) => {
+        const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+        const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
 
         // Check if this element overlaps with the highlight range
-        if (elEnd > previewHighlight.startLine && elStart < previewHighlight.endLine) {
+        if (elEnd > previewHighlight.charStart && elStart < previewHighlight.charEnd) {
           el.classList.add(HIGHLIGHT_CLASS);
+        }
+      });
+
+      // Also check line-based elements as fallback
+      const elementsWithLinePos = articleRef.current.querySelectorAll('[data-source-line]');
+      elementsWithLinePos.forEach((el) => {
+        const elStart = parseInt(el.getAttribute('data-source-start') || '-1', 10);
+        const elEnd = parseInt(el.getAttribute('data-source-end') || '-1', 10);
+
+        if (elStart !== -1 && elEnd !== -1) {
+          if (elEnd > previewHighlight.charStart && elStart < previewHighlight.charEnd) {
+            el.classList.add(HIGHLIGHT_CLASS);
+          }
         }
       });
     }
@@ -220,11 +240,11 @@ ${processedHtml}
           background-color: rgba(16, 185, 129, 0.2) !important;
           outline-color: rgba(16, 185, 129, 0.5);
         }
-        [data-source-line] {
+        [data-source-line], [${SOURCE_CHAR_START_ATTR}] {
           cursor: pointer;
           transition: background-color 0.15s;
         }
-        [data-source-line]:hover {
+        [data-source-line]:hover, [${SOURCE_CHAR_START_ATTR}]:hover {
           background-color: rgba(148, 163, 184, 0.1);
         }
       `}</style>

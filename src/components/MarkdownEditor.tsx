@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { Copy, RotateCcw } from 'lucide-react';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getLineFromPosition } from '../utils/sourceMapping';
+import { getPositionForLine } from '../utils/sourceMapping';
 import type { EditorSettings } from '../types';
 
 interface MarkdownEditorProps {
@@ -40,7 +40,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     editorScrollRef, 
     editorTextareaRef,
     syncScrollFromEditor, 
-    navigateToPreviewLine,
+    navigateToPreviewChar,
     editorHighlight,
     setPreviewHighlight,
   } = useEditorContext();
@@ -90,12 +90,14 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     }
   }, [value]);
 
-  // Handle click on line number to navigate to preview
+  // Handle click on line number to navigate to preview (character-precise)
   const handleLineNumberClick = useCallback((lineNumber: number) => {
-    navigateToPreviewLine(lineNumber - 1); // Convert to 0-indexed
-  }, [navigateToPreviewLine]);
+    // Get character position for the start of the line
+    const charPos = getPositionForLine(value, lineNumber);
+    navigateToPreviewChar(charPos);
+  }, [value, navigateToPreviewChar]);
 
-  // Handle selection change to highlight corresponding lines in preview
+  // Handle selection change to highlight corresponding text in preview (character-based)
   const handleSelectionChange = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea || document.activeElement !== textarea) return;
@@ -108,15 +110,12 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
       return;
     }
 
-    // Get line numbers for selection
-    const startLine = getLineFromPosition(value, selectionStart);
-    const endLine = getLineFromPosition(value, selectionEnd);
-
+    // Set character-based highlight
     setPreviewHighlight({
-      startLine: startLine - 1, // Convert to 0-indexed
-      endLine: endLine, // End is exclusive
+      charStart: selectionStart,
+      charEnd: selectionEnd,
     });
-  }, [value, setPreviewHighlight]);
+  }, [setPreviewHighlight]);
 
   // Register refs with context
   useEffect(() => {
@@ -149,11 +148,17 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   const lineCount = value.split('\n').length;
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
 
-  // Check if a line is highlighted
+  // Check if a line is highlighted (based on character range)
   const isLineHighlighted = (lineNum: number) => {
     if (!editorHighlight) return false;
-    const zeroIndexedLine = lineNum - 1;
-    return zeroIndexedLine >= editorHighlight.startLine && zeroIndexedLine < editorHighlight.endLine;
+    
+    // Calculate character range for this line
+    const lineStart = getPositionForLine(value, lineNum);
+    const lines = value.split('\n');
+    const lineEnd = lineStart + (lines[lineNum - 1]?.length || 0);
+    
+    // Check if line overlaps with highlight range
+    return editorHighlight.charEnd > lineStart && editorHighlight.charStart < lineEnd;
   };
 
   return (

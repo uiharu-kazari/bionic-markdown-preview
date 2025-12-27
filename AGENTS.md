@@ -297,26 +297,34 @@ The Preview component has `handleCopyHtml` and `handleDownloadHtml`. To add new 
 6. Apply `style.color` to each span
 7. Use ResizeObserver to reapply on container resize
 
-### Source Line Mapping (Cursor Position & Selection Sync)
+### Source Line Mapping (Character-Precise Cursor Position & Selection Sync)
 
-Enables bidirectional navigation and selection sync between editor and preview.
+Enables bidirectional navigation and selection sync between editor and preview with **character-level precision**.
 
 **How it works:**
-1. Custom markdown-it renderer injects `data-source-line` and `data-source-line-end` attributes on block elements
-2. DOMPurify is configured to allow these custom attributes
-3. `EditorContext` provides navigation methods and highlight state
+1. Custom markdown-it renderer injects both line-level (`data-source-line`) and character-level (`data-source-start`, `data-source-end`) attributes
+2. Text spans track their exact character positions in the source markdown
+3. Uses `caretPositionFromPoint`/`caretRangeFromPoint` APIs for click-to-character mapping
+4. DOMPurify allows all source mapping attributes
 
 **Editor → Preview:**
 - Click on a line number → scrolls preview to corresponding element with temporary highlight
-- Select text in editor → highlights overlapping elements in preview (green outline)
+- Select text in editor → highlights all preview elements that overlap the selection character range
 
 **Preview → Editor:**
-- Click on any preview element → finds `data-source-line` attribute and focuses editor at that line
+- Click on any word/text in preview → uses browser caret APIs to find exact click position
+- Maps click position to source character offset → positions editor cursor precisely
+- Focuses editor at the exact character position, not just the line
+
+**Character mapping algorithm:**
+1. Each text token gets wrapped in a span with `data-source-start` and `data-source-end` attributes
+2. Markdown syntax (**, *, #, etc.) is stripped during position calculation
+3. Click coordinates → caret position → source character offset → editor cursor
 
 **Key files:**
-- `utils/sourceMapping.ts` - markdown-it customization and mapping utilities
-- `contexts/EditorContext.tsx` - navigation methods and highlight state
-- `components/Preview.tsx` - click handler and highlight CSS
+- `utils/sourceMapping.ts` - markdown-it customization, character offset tracking, click position mapping
+- `contexts/EditorContext.tsx` - character-based navigation and highlight state
+- `components/Preview.tsx` - click handler using `getCharacterPositionFromClick()`
 
 ---
 
@@ -354,5 +362,6 @@ Enables bidirectional navigation and selection sync between editor and preview.
 - **Font loading is lazy**: Google Fonts are loaded only when selected
 - **Settings panel vs Toolbar**: <1440px shows settings panel, ≥1440px shows inline toolbar controls
 - **Layout direction affects ResizablePanels**: `horizontal` = side-by-side, `vertical` = stacked
-- **Source line mapping is block-level**: Clicking navigates to the block element (paragraph, heading, list) containing the line, not character-level precision
+- **Source mapping is character-precise**: Uses `caretPositionFromPoint`/`caretRangeFromPoint` APIs to map clicks to exact source positions
 - **Selection highlight auto-clears**: Preview highlights clear when editor loses focus
+- **Markdown syntax stripped for mapping**: Bold markers (**), headings (#), etc. are handled correctly in position calculations
