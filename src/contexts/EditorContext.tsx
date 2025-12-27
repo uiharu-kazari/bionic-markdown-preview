@@ -86,9 +86,16 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     textarea.focus();
     textarea.setSelectionRange(clampedStart, clampedEnd);
 
-    // Highlight the selection in editor
-    setEditorHighlight({ charStart: clampedStart, charEnd: clampedEnd });
-    setTimeout(() => setEditorHighlight(null), 1500);
+    // Re-apply selection after React update cycle to avoid controlled component reset
+    const savedStart = clampedStart;
+    const savedEnd = clampedEnd;
+    setTimeout(() => {
+      if (textarea === document.activeElement) {
+        textarea.setSelectionRange(savedStart, savedEnd);
+      }
+      setEditorHighlight({ charStart: savedStart, charEnd: savedEnd });
+      setTimeout(() => setEditorHighlight(null), 1500);
+    }, 0);
   }, []);
 
   const syncScroll = useCallback((source: HTMLElement | null, target: HTMLElement | null) => {

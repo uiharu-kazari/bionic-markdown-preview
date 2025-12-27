@@ -405,6 +405,7 @@ export function getSelectionSourceRange(
 
 /**
  * Get source character position from a DOM node and offset within the preview.
+ * Handles both text nodes and element-level selections (from bionic processing).
  * @param isEndPosition - If true, we want the end position (for selection end)
  */
 function getSourcePositionFromNode(
@@ -413,74 +414,157 @@ function getSourcePositionFromNode(
   previewRoot: Element,
   isEndPosition = false
 ): number | null {
-  // If node is an element and offset refers to child index
+  // For text nodes, we have precise character offset
+  if (node.nodeType === Node.TEXT_NODE) {
+    return getPositionFromTextNode(node as Text, offset, previewRoot);
+  }
+  
+  // For element nodes, offset refers to child index
   if (node.nodeType === Node.ELEMENT_NODE) {
     const el = node as Element;
     const children = el.childNodes;
     
-    // If selecting at a child position, get that child's source info
-    if (offset < children.length) {
-      const targetChild = children[offset];
-      if (targetChild) {
-        return getSourcePositionFromNode(targetChild, 0, previewRoot, isEndPosition);
+    // Offset beyond last child - get end position of last text
+    if (offset >= children.length) {
+      // Find the last text node within this element
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      let lastTextNode: Text | null = null;
+      while (walker.nextNode()) {
+        lastTextNode = walker.currentNode as Text;
       }
-    } else if (children.length > 0) {
-      // Offset beyond last child - get end of last child
-      const lastChild = children[children.length - 1];
-      if (lastChild.nodeType === Node.ELEMENT_NODE) {
-        const lastEl = lastChild as Element;
-        const endAttr = lastEl.getAttribute(SOURCE_CHAR_END_ATTR);
-        if (endAttr !== null) {
-          return parseInt(endAttr, 10);
-        }
+      if (lastTextNode) {
+        return getPositionFromTextNode(lastTextNode, lastTextNode.length, previewRoot);
+      }
+      // Fallback to element's end position
+      const endAttr = findSourceAttribute(el, previewRoot, SOURCE_CHAR_END_ATTR);
+      return endAttr !== null ? parseInt(endAttr, 10) : null;
+    }
+    
+    // Get the child at this offset
+    const targetChild = children[offset];
+    if (!targetChild) return null;
+    
+    // For start position: find first text node within target
+    // For end position: find last text node within target
+    if (targetChild.nodeType === Node.TEXT_NODE) {
+      const textOffset = isEndPosition ? (targetChild.textContent?.length || 0) : 0;
+      return getPositionFromTextNode(targetChild as Text, textOffset, previewRoot);
+    }
+    
+    // Target is an element - find first/last text node inside
+    const walker = document.createTreeWalker(targetChild, NodeFilter.SHOW_TEXT, null);
+    let textNode: Text | null = null;
+    
+    if (isEndPosition) {
+      // Get last text node
+      while (walker.nextNode()) {
+        textNode = walker.currentNode as Text;
+      }
+      if (textNode) {
+        return getPositionFromTextNode(textNode, textNode.length, previewRoot);
+      }
+    } else {
+      // Get first text node
+      if (walker.nextNode()) {
+        textNode = walker.currentNode as Text;
+        return getPositionFromTextNode(textNode, 0, previewRoot);
       }
     }
+    
+    // No text found - fall back to element's source position
+    const attr = isEndPosition ? SOURCE_CHAR_END_ATTR : SOURCE_CHAR_START_ATTR;
+    const pos = findSourceAttribute(targetChild as Element, previewRoot, attr);
+    return pos !== null ? parseInt(pos, 10) : null;
   }
   
+  return null;
+}
+
+/**
+ * Find source attribute by walking up the DOM tree
+ */
+function findSourceAttribute(el: Element, previewRoot: Element, attr: string): string | null {
+  let current: Element | null = el;
+  while (current && current !== previewRoot) {
+    const value = current.getAttribute(attr);
+    if (value !== null) return value;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+/**
+ * Get source position from a text node and character offset.
+ * Handles bionic-processed text where the original text is split into multiple nodes.
+ */
+function getPositionFromTextNode(
+  textNode: Text,
+  charOffset: number,
+  previewRoot: Element
+): number | null {
   // Find nearest element with source position data
-  let current: Node | null = node;
+  let sourceElement: Element | null = null;
+  let current: Node | null = textNode;
   
   while (current && current !== previewRoot) {
     if (current.nodeType === Node.ELEMENT_NODE) {
       const el = current as Element;
       const startAttr = el.getAttribute(SOURCE_CHAR_START_ATTR);
-      const endAttr = el.getAttribute(SOURCE_CHAR_END_ATTR);
-      const sourceTextAttr = el.getAttribute(SOURCE_TEXT_ATTR);
       
-      if (startAttr !== null && endAttr !== null) {
-        const start = parseInt(startAttr, 10);
-        const end = parseInt(endAttr, 10);
-        
-        // If original node was text, calculate precise position
-        if (node.nodeType === Node.TEXT_NODE) {
-          const displayText = node.textContent || '';
-          
-          // Use precise mapping if source text is available
-          if (sourceTextAttr) {
-            const sourceText = decodeURIComponent(sourceTextAttr);
-            const displayToSourceMap = buildDisplayToSourceMap(sourceText, displayText);
-            const sourceOffset = displayToSourceMap[Math.min(offset, displayToSourceMap.length - 1)] ?? offset;
-            return start + sourceOffset;
-          }
-          
-          // Fallback to proportional calculation
-          const textLen = displayText.length;
-          const sourceLen = end - start;
-          
-          if (textLen > 0) {
-            const ratio = offset / textLen;
-            return Math.round(start + (sourceLen * ratio));
-          }
-        }
-        
-        // Return end position if requested, otherwise start
-        return isEndPosition ? end : start;
+      if (startAttr !== null) {
+        sourceElement = el;
+        break;
       }
     }
     current = current.parentNode;
   }
   
-  return null;
+  if (!sourceElement) return null;
+  
+  const startAttr = sourceElement.getAttribute(SOURCE_CHAR_START_ATTR);
+  const endAttr = sourceElement.getAttribute(SOURCE_CHAR_END_ATTR);
+  const sourceTextAttr = sourceElement.getAttribute(SOURCE_TEXT_ATTR);
+  
+  if (startAttr === null || endAttr === null) return null;
+  
+  const start = parseInt(startAttr, 10);
+  const end = parseInt(endAttr, 10);
+  
+  // Calculate cumulative offset: how many characters come before this text node
+  // within the source-mapped element
+  let cumulativeOffset = 0;
+  const walker = document.createTreeWalker(sourceElement, NodeFilter.SHOW_TEXT, null);
+  
+  while (walker.nextNode()) {
+    if (walker.currentNode === textNode) {
+      // Found our text node - add the character offset within it
+      cumulativeOffset += charOffset;
+      break;
+    }
+    // Add length of preceding text nodes
+    cumulativeOffset += walker.currentNode.textContent?.length || 0;
+  }
+  
+  // Now map the cumulative display offset to source offset
+  if (sourceTextAttr) {
+    const sourceText = decodeURIComponent(sourceTextAttr);
+    // Get full display text by concatenating all text nodes
+    const fullDisplayText = sourceElement.textContent || '';
+    const displayToSourceMap = buildDisplayToSourceMap(sourceText, fullDisplayText);
+    const sourceOffset = displayToSourceMap[Math.min(cumulativeOffset, displayToSourceMap.length - 1)] ?? cumulativeOffset;
+    return start + sourceOffset;
+  }
+  
+  // Fallback to proportional calculation using cumulative offset
+  const fullDisplayLen = sourceElement.textContent?.length || 0;
+  const sourceLen = end - start;
+  
+  if (fullDisplayLen > 0) {
+    const ratio = cumulativeOffset / fullDisplayLen;
+    return Math.round(start + (sourceLen * ratio));
+  }
+  
+  return cumulativeOffset === 0 ? start : end;
 }
 
 /**

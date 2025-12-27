@@ -139,7 +139,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
       const selectionRange = getSelectionSourceRange(articleRef.current);
       if (selectionRange && selectionRange.sourceStart !== selectionRange.sourceEnd) {
         setEditorSelection(selectionRange.sourceStart, selectionRange.sourceEnd);
-        // Clear the preview selection after syncing
+        // Clear the preview selection after syncing (it's now shown in the editor)
         selection.removeAllRanges();
       }
     } else {
