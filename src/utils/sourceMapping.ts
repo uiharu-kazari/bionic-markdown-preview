@@ -11,6 +11,7 @@ export const SOURCE_LINE_ATTR = 'data-source-line';
 export const SOURCE_LINE_END_ATTR = 'data-source-line-end';
 export const SOURCE_CHAR_START_ATTR = 'data-source-start';
 export const SOURCE_CHAR_END_ATTR = 'data-source-end';
+export const SOURCE_TEXT_ATTR = 'data-source-text'; // Store source text for precise mapping
 
 // CSS class for highlighted elements
 export const HIGHLIGHT_CLASS = 'source-line-highlight';
@@ -31,6 +32,7 @@ interface RenderState {
   source: string;
   lineOffsets: number[]; // Character offset for start of each line
   currentLineStart: number;
+  searchPosition: number; // Track position to find next occurrence, not first
 }
 
 /**
@@ -49,10 +51,12 @@ function calculateLineOffsets(source: string): number[] {
 /**
  * Find character offset in source for a given line and column
  */
-function getCharOffset(lineOffsets: number[], line: number, col: number): number {
+function _getCharOffset(lineOffsets: number[], line: number, col: number): number {
   if (line < 0 || line >= lineOffsets.length) return 0;
   return lineOffsets[line] + col;
 }
+// Exported for potential future use
+export { _getCharOffset as getCharOffset };
 
 /**
  * Creates a markdown-it instance with character-precise source mapping.
@@ -75,12 +79,13 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
         source: src,
         lineOffsets: calculateLineOffsets(src),
         currentLineStart: 0,
+        searchPosition: 0, // Track position for sequential text matching
       } as RenderState,
     };
     return originalRender(src, renderEnv);
   };
 
-  // Override text rendering to include character positions
+  // Override text rendering to include character positions and source text
   const defaultTextRule = md.renderer.rules.text;
   md.renderer.rules.text = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
@@ -91,7 +96,10 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
       const pos = findTextInSource(state, token.content, tokens, idx);
       if (pos) {
         const escaped = md.utils.escapeHtml(token.content);
-        return `<span ${SOURCE_CHAR_START_ATTR}="${pos.start}" ${SOURCE_CHAR_END_ATTR}="${pos.end}">${escaped}</span>`;
+        // Store the actual source text for precise character mapping
+        const sourceText = state.source.substring(pos.start, pos.end);
+        const encodedSourceText = encodeURIComponent(sourceText);
+        return `<span ${SOURCE_CHAR_START_ATTR}="${pos.start}" ${SOURCE_CHAR_END_ATTR}="${pos.end}" ${SOURCE_TEXT_ATTR}="${encodedSourceText}">${escaped}</span>`;
       }
     }
     
@@ -125,17 +133,16 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
   }
 
   // Block elements with source mapping
-  const blockRules: Array<keyof MarkdownIt.Renderer.RenderRuleRecord> = [
+  const blockRules = [
     'paragraph_open', 'heading_open', 'blockquote_open',
     'bullet_list_open', 'ordered_list_open', 'list_item_open',
     'table_open',
-  ];
+  ] as const;
 
   for (const rule of blockRules) {
     const defaultRule = md.renderer.rules[rule];
     md.renderer.rules[rule] = (tokens, idx, options, env, self) => {
       const attrs = injectSourceLine(tokens, idx, env);
-      const token = tokens[idx];
       
       if (attrs) {
         // Insert attributes into the opening tag
@@ -222,37 +229,28 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
 /**
  * Find the position of text content in the source markdown.
  * Handles markdown syntax stripping (**, *, etc.)
+ * Uses sequential search position to correctly match repeated text.
  */
 function findTextInSource(
   state: RenderState,
   text: string,
-  tokens: Token[],
-  currentIdx: number
+  _tokens: Token[],
+  _currentIdx: number
 ): { start: number; end: number } | null {
-  // Find the parent block's line range
-  let blockStart = 0;
-  let blockEnd = state.source.length;
+  // Search from the current position (to handle repeated text correctly)
+  const searchStart = state.searchPosition;
+  const searchRange = state.source.substring(searchStart);
   
-  // Walk backwards to find containing block
-  for (let i = currentIdx - 1; i >= 0; i--) {
-    if (tokens[i].map) {
-      blockStart = state.lineOffsets[tokens[i].map[0]] || 0;
-      blockEnd = tokens[i].map[1] < state.lineOffsets.length 
-        ? state.lineOffsets[tokens[i].map[1]] 
-        : state.source.length;
-      break;
-    }
-  }
-
-  // Search for the text in the block range
-  const searchRange = state.source.substring(blockStart, blockEnd);
-  
-  // Try direct match first
+  // Try direct match first (from current position)
   let idx = searchRange.indexOf(text);
   if (idx !== -1) {
+    const absoluteStart = searchStart + idx;
+    const absoluteEnd = absoluteStart + text.length;
+    // Advance search position past this match
+    state.searchPosition = absoluteEnd;
     return {
-      start: blockStart + idx,
-      end: blockStart + idx + text.length,
+      start: absoluteStart,
+      end: absoluteEnd,
     };
   }
 
@@ -263,16 +261,20 @@ function findTextInSource(
     // Map back to original position using offset map
     const originalStart = strippedSource.offsetMap[idx] ?? idx;
     const originalEnd = strippedSource.offsetMap[idx + text.length - 1] ?? (idx + text.length - 1);
+    const absoluteStart = searchStart + originalStart;
+    const absoluteEnd = searchStart + originalEnd + 1;
+    // Advance search position past this match
+    state.searchPosition = absoluteEnd;
     return {
-      start: blockStart + originalStart,
-      end: blockStart + originalEnd + 1,
+      start: absoluteStart,
+      end: absoluteEnd,
     };
   }
 
-  // Fallback: use block range
+  // Fallback: use current position
   return {
-    start: blockStart,
-    end: Math.min(blockStart + text.length, blockEnd),
+    start: searchStart,
+    end: Math.min(searchStart + text.length, state.source.length),
   };
 }
 
@@ -443,6 +445,7 @@ function getSourcePositionFromNode(
       const el = current as Element;
       const startAttr = el.getAttribute(SOURCE_CHAR_START_ATTR);
       const endAttr = el.getAttribute(SOURCE_CHAR_END_ATTR);
+      const sourceTextAttr = el.getAttribute(SOURCE_TEXT_ATTR);
       
       if (startAttr !== null && endAttr !== null) {
         const start = parseInt(startAttr, 10);
@@ -450,8 +453,18 @@ function getSourcePositionFromNode(
         
         // If original node was text, calculate precise position
         if (node.nodeType === Node.TEXT_NODE) {
-          const textContent = node.textContent || '';
-          const textLen = textContent.length;
+          const displayText = node.textContent || '';
+          
+          // Use precise mapping if source text is available
+          if (sourceTextAttr) {
+            const sourceText = decodeURIComponent(sourceTextAttr);
+            const displayToSourceMap = buildDisplayToSourceMap(sourceText, displayText);
+            const sourceOffset = displayToSourceMap[Math.min(offset, displayToSourceMap.length - 1)] ?? offset;
+            return start + sourceOffset;
+          }
+          
+          // Fallback to proportional calculation
+          const textLen = displayText.length;
           const sourceLen = end - start;
           
           if (textLen > 0) {
@@ -468,6 +481,68 @@ function getSourcePositionFromNode(
   }
   
   return null;
+}
+
+/**
+ * Build a mapping from display text positions to source text positions.
+ * This accounts for markdown syntax that gets stripped during rendering.
+ */
+function buildDisplayToSourceMap(sourceText: string, displayText: string): number[] {
+  const map: number[] = [];
+  
+  let sourceIdx = 0;
+  let displayIdx = 0;
+  
+  while (displayIdx < displayText.length && sourceIdx < sourceText.length) {
+    // Skip markdown syntax in source
+    // Bold markers: ** or __
+    if ((sourceText[sourceIdx] === '*' && sourceText[sourceIdx + 1] === '*') ||
+        (sourceText[sourceIdx] === '_' && sourceText[sourceIdx + 1] === '_')) {
+      sourceIdx += 2;
+      continue;
+    }
+    
+    // Italic markers: * or _ (at word boundaries)
+    if ((sourceText[sourceIdx] === '*' || sourceText[sourceIdx] === '_') &&
+        (sourceIdx === 0 || /[\s\n]/.test(sourceText[sourceIdx - 1]) || 
+         sourceIdx === sourceText.length - 1 || /[\s\n]/.test(sourceText[sourceIdx + 1]) ||
+         sourceText[sourceIdx - 1] === '*' || sourceText[sourceIdx - 1] === '_')) {
+      sourceIdx++;
+      continue;
+    }
+    
+    // Strikethrough: ~~
+    if (sourceText[sourceIdx] === '~' && sourceText[sourceIdx + 1] === '~') {
+      sourceIdx += 2;
+      continue;
+    }
+    
+    // Inline code backticks
+    if (sourceText[sourceIdx] === '`') {
+      sourceIdx++;
+      continue;
+    }
+    
+    // If characters match, record the mapping
+    if (sourceText[sourceIdx] === displayText[displayIdx]) {
+      map[displayIdx] = sourceIdx;
+      sourceIdx++;
+      displayIdx++;
+    } else {
+      // Characters don't match - skip source character (likely markdown syntax)
+      sourceIdx++;
+    }
+  }
+  
+  // Fill remaining with last known position
+  const lastSourcePos = sourceIdx > 0 ? sourceIdx : 0;
+  while (map.length < displayText.length) {
+    map.push(lastSourcePos);
+  }
+  // Add one more for "after last character" position
+  map.push(Math.min(lastSourcePos + 1, sourceText.length));
+  
+  return map;
 }
 
 /**
@@ -508,6 +583,7 @@ export function getCharacterPositionFromClick(
         const el = node as Element;
         const startAttr = el.getAttribute(SOURCE_CHAR_START_ATTR);
         const endAttr = el.getAttribute(SOURCE_CHAR_END_ATTR);
+        const sourceTextAttr = el.getAttribute(SOURCE_TEXT_ATTR);
         
         if (startAttr !== null && endAttr !== null) {
           const start = parseInt(startAttr, 10);
@@ -515,12 +591,24 @@ export function getCharacterPositionFromClick(
           
           // If we have a text node, calculate precise position within it
           if (range.startContainer.nodeType === Node.TEXT_NODE) {
-            const textContent = range.startContainer.textContent || '';
+            const displayText = range.startContainer.textContent || '';
             const clickOffset = range.startOffset;
             
+            // Use precise mapping if source text is available
+            if (sourceTextAttr) {
+              const sourceText = decodeURIComponent(sourceTextAttr);
+              const displayToSourceMap = buildDisplayToSourceMap(sourceText, displayText);
+              
+              // Get the exact source position for this click offset
+              const sourceOffset = displayToSourceMap[Math.min(clickOffset, displayToSourceMap.length - 1)] ?? clickOffset;
+              const precisePos = start + sourceOffset;
+              return { sourceStart: precisePos, sourceEnd: precisePos };
+            }
+            
+            // Fallback to proportional calculation if no source text stored
             // Calculate proportional position in source
             const sourceLen = end - start;
-            const textLen = textContent.length;
+            const textLen = displayText.length;
             if (textLen > 0) {
               const ratio = clickOffset / textLen;
               const precisePos = Math.round(start + (sourceLen * ratio));
@@ -797,6 +885,9 @@ export function insertCursorAtPosition(
   // Don't show cursor - this is an architectural limitation
   if (!targetElement) return false;
 
+  // Now we know targetElement is definitely Element (not null)
+  const element = targetElement as Element;
+
   // Calculate the offset within this element's text
   const sourceOffset = sourceCharPos - targetStart;
   const sourceLength = targetEnd - targetStart;
@@ -806,7 +897,7 @@ export function insertCursorAtPosition(
   
   // Walk through text nodes to find where to insert cursor
   const walker = document.createTreeWalker(
-    targetElement,
+    element,
     NodeFilter.SHOW_TEXT,
     null
   );
@@ -845,7 +936,7 @@ export function insertCursorAtPosition(
 
   // If no text node found, try to append to the element
   if (!textNode) {
-    const firstTextNode = targetElement.firstChild;
+    const firstTextNode = element.firstChild;
     if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
       textNode = firstTextNode as Text;
       insertOffset = cursorAtEnd ? (firstTextNode.textContent?.length || 0) : 0;
@@ -853,9 +944,9 @@ export function insertCursorAtPosition(
       // Create cursor at the start/end of the element
       const cursor = createCursorElement();
       if (cursorAtEnd) {
-        targetElement.appendChild(cursor);
+        element.appendChild(cursor);
       } else {
-        targetElement.insertBefore(cursor, targetElement.firstChild);
+        element.insertBefore(cursor, element.firstChild);
       }
       return true;
     }

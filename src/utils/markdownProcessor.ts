@@ -7,6 +7,7 @@ import {
   SOURCE_LINE_END_ATTR,
   SOURCE_CHAR_START_ATTR,
   SOURCE_CHAR_END_ATTR,
+  SOURCE_TEXT_ATTR,
 } from './sourceMapping';
 
 const md = createMarkdownItWithSourceMap();
@@ -27,7 +28,7 @@ export function renderMarkdown(content: string): string {
     ALLOWED_ATTR: [
       'href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel',
       SOURCE_LINE_ATTR, SOURCE_LINE_END_ATTR,
-      SOURCE_CHAR_START_ATTR, SOURCE_CHAR_END_ATTR,
+      SOURCE_CHAR_START_ATTR, SOURCE_CHAR_END_ATTR, SOURCE_TEXT_ATTR,
     ],
   });
 }
@@ -68,8 +69,10 @@ export function applyBionicReading(
         if (parent?.tagName === 'SPAN') {
           const startAttr = parent.getAttribute(SOURCE_CHAR_START_ATTR);
           const endAttr = parent.getAttribute(SOURCE_CHAR_END_ATTR);
+          const sourceTextAttr = parent.getAttribute(SOURCE_TEXT_ATTR);
           if (startAttr !== null) wrapper.setAttribute(SOURCE_CHAR_START_ATTR, startAttr);
           if (endAttr !== null) wrapper.setAttribute(SOURCE_CHAR_END_ATTR, endAttr);
+          if (sourceTextAttr !== null) wrapper.setAttribute(SOURCE_TEXT_ATTR, sourceTextAttr);
         }
 
         if (dimOpacity < 1) {

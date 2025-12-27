@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
 import { 
   scrollPreviewToChar, 
-  getPreviewElementsForCharRange,
   getLineFromPosition,
 } from '../utils/sourceMapping';
 
