@@ -7,7 +7,8 @@ import {
   HIGHLIGHT_CLASS,
   SOURCE_CHAR_START_ATTR,
   SOURCE_CHAR_END_ATTR,
-  getPreviewElementsForCharRange,
+  insertCursorAtPosition,
+  removeCursor,
 } from '../utils/sourceMapping';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -170,31 +171,29 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
   }, [previewHighlight, processedHtml]);
 
-  // Show cursor indicator at editor cursor position
-  const CURSOR_INDICATOR_CLASS = 'preview-cursor-indicator';
-  
+  // Show precise cursor at editor cursor position
   useEffect(() => {
     if (!articleRef.current) return;
 
-    // Remove existing cursor indicators
-    articleRef.current.querySelectorAll(`.${CURSOR_INDICATOR_CLASS}`).forEach((el) => {
-      el.classList.remove(CURSOR_INDICATOR_CLASS);
-    });
+    // Remove existing cursor
+    removeCursor(articleRef.current);
 
-    // Add cursor indicator if we have a cursor position and no selection highlight
+    // Insert cursor if we have a position and no selection highlight
     if (editorCursorPosition !== null && !previewHighlight) {
-      // Find elements that contain the cursor position
-      const elements = getPreviewElementsForCharRange(
-        articleRef.current, 
-        editorCursorPosition, 
-        editorCursorPosition + 1
-      );
-      
-      // Mark the most specific (smallest range) element
-      if (elements.length > 0) {
-        elements[0].classList.add(CURSOR_INDICATOR_CLASS);
-      }
+      // Small delay to ensure DOM is updated after Bionic processing
+      requestAnimationFrame(() => {
+        if (articleRef.current) {
+          insertCursorAtPosition(articleRef.current, editorCursorPosition);
+        }
+      });
     }
+    
+    // Cleanup on unmount or when position changes
+    return () => {
+      if (articleRef.current) {
+        removeCursor(articleRef.current);
+      }
+    };
   }, [editorCursorPosition, previewHighlight, processedHtml]);
 
   const handleCopyHtml = useCallback(async () => {
@@ -269,22 +268,24 @@ ${processedHtml}
           background-color: rgba(16, 185, 129, 0.2) !important;
           outline-color: rgba(16, 185, 129, 0.5);
         }
-        .preview-cursor-indicator {
-          position: relative;
-          background-color: rgba(59, 130, 246, 0.12) !important;
-          border-left: 3px solid rgba(59, 130, 246, 0.8);
-          padding-left: 4px !important;
-          margin-left: -4px;
-          border-radius: 2px;
-          animation: cursorPulse 1.2s ease-in-out infinite;
+        .preview-cursor {
+          display: inline-block;
+          width: 2.5px;
+          height: 1.15em;
+          background-color: rgb(37, 99, 235);
+          vertical-align: text-bottom;
+          margin: 0 -1px;
+          animation: cursorBlink 1s step-end infinite;
+          border-radius: 1px;
+          box-shadow: 0 0 2px rgba(37, 99, 235, 0.5);
         }
-        .dark .preview-cursor-indicator {
-          background-color: rgba(59, 130, 246, 0.18) !important;
-          border-left-color: rgba(96, 165, 250, 0.9);
+        .dark .preview-cursor {
+          background-color: rgb(96, 165, 250);
+          box-shadow: 0 0 2px rgba(96, 165, 250, 0.5);
         }
-        @keyframes cursorPulse {
-          0%, 100% { opacity: 1; border-left-color: rgba(59, 130, 246, 0.8); }
-          50% { opacity: 0.7; border-left-color: rgba(59, 130, 246, 0.5); }
+        @keyframes cursorBlink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
         }
         [data-source-line], [${SOURCE_CHAR_START_ATTR}] {
           cursor: pointer;

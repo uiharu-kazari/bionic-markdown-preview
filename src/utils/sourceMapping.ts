@@ -629,3 +629,146 @@ export function getPreviewElementsForLine(
 
   return result;
 }
+
+// Cursor element ID for cleanup
+export const CURSOR_ELEMENT_ID = 'preview-cursor-marker';
+
+/**
+ * Insert a blinking cursor element at the precise character position in the preview.
+ * Returns true if cursor was successfully inserted.
+ */
+export function insertCursorAtPosition(
+  previewRoot: Element,
+  sourceCharPos: number
+): boolean {
+  // Remove any existing cursor
+  removeCursor(previewRoot);
+
+  // Find the span containing this character position
+  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
+  let targetElement: Element | null = null;
+  let targetStart = 0;
+  let targetEnd = 0;
+
+  // Find the most specific (smallest range) element containing the position
+  let smallestRange = Infinity;
+  
+  elements.forEach((el) => {
+    const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+    const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+
+    // Check if this element contains the cursor position
+    if (sourceCharPos >= elStart && sourceCharPos <= elEnd) {
+      const range = elEnd - elStart;
+      if (range < smallestRange) {
+        smallestRange = range;
+        targetElement = el;
+        targetStart = elStart;
+        targetEnd = elEnd;
+      }
+    }
+  });
+
+  if (!targetElement) return false;
+
+  // Calculate the offset within this element's text
+  const sourceOffset = sourceCharPos - targetStart;
+  const sourceLength = targetEnd - targetStart;
+  
+  // Walk through text nodes to find where to insert cursor
+  const walker = document.createTreeWalker(
+    targetElement,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  let currentOffset = 0;
+  let textNode: Text | null = null;
+  let insertOffset = 0;
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const nodeLength = node.textContent?.length || 0;
+    
+    // Calculate proportional position
+    const nodeStartRatio = currentOffset / Math.max(1, sourceLength);
+    const nodeEndRatio = (currentOffset + nodeLength) / Math.max(1, sourceLength);
+    const targetRatio = sourceOffset / Math.max(1, sourceLength);
+
+    if (targetRatio >= nodeStartRatio && targetRatio <= nodeEndRatio) {
+      textNode = node;
+      // Calculate offset within this text node
+      const relativeRatio = (targetRatio - nodeStartRatio) / Math.max(0.001, nodeEndRatio - nodeStartRatio);
+      insertOffset = Math.round(relativeRatio * nodeLength);
+      break;
+    }
+    
+    currentOffset += nodeLength;
+  }
+
+  // If no text node found, try to append to the element
+  if (!textNode) {
+    const firstTextNode = targetElement.firstChild;
+    if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
+      textNode = firstTextNode as Text;
+      insertOffset = 0;
+    } else {
+      // Create cursor at the start of the element
+      const cursor = createCursorElement();
+      targetElement.insertBefore(cursor, targetElement.firstChild);
+      return true;
+    }
+  }
+
+  // Split text node and insert cursor
+  if (textNode && textNode.parentNode) {
+    const cursor = createCursorElement();
+    
+    if (insertOffset === 0) {
+      textNode.parentNode.insertBefore(cursor, textNode);
+    } else if (insertOffset >= (textNode.textContent?.length || 0)) {
+      textNode.parentNode.insertBefore(cursor, textNode.nextSibling);
+    } else {
+      // Split the text node
+      const afterText = textNode.splitText(insertOffset);
+      textNode.parentNode.insertBefore(cursor, afterText);
+    }
+    
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Create the cursor element
+ */
+function createCursorElement(): HTMLElement {
+  const cursor = document.createElement('span');
+  cursor.id = CURSOR_ELEMENT_ID;
+  cursor.className = 'preview-cursor';
+  cursor.setAttribute('aria-hidden', 'true');
+  return cursor;
+}
+
+/**
+ * Remove the cursor element from preview
+ */
+export function removeCursor(previewRoot: Element): void {
+  const existing = previewRoot.querySelector(`#${CURSOR_ELEMENT_ID}`);
+  if (existing) {
+    // If cursor split a text node, merge them back
+    const prev = existing.previousSibling;
+    const next = existing.nextSibling;
+    
+    existing.remove();
+    
+    // Merge adjacent text nodes
+    if (prev && next && 
+        prev.nodeType === Node.TEXT_NODE && 
+        next.nodeType === Node.TEXT_NODE) {
+      (prev as Text).textContent += (next as Text).textContent || '';
+      next.parentNode?.removeChild(next);
+    }
+  }
+}
