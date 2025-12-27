@@ -113,6 +113,7 @@ All application state lives in `App.tsx` using the `useLocalStorage` hook:
 | `utils/gradientReading.ts` | `applyGradientReading()`, `removeGradient()`, `createGradientObserver()` | Post-render gradient coloring with ResizeObserver |
 | `utils/colorUtils.ts` | `GRADIENT_THEME_LIST`, `interpolateHsl()`, `ensureContrast()`, `adjustPaletteForTheme()` | HSL manipulation, WCAG contrast checking |
 | `utils/fonts.ts` | `GOOGLE_FONTS`, `SYSTEM_FONTS`, `loadGoogleFont()` | Dynamic Google Font loading |
+| `utils/sourceMapping.ts` | `createMarkdownItWithSourceMap()`, `getSourceLineForElement()`, `scrollPreviewToLine()` | Source line mapping between editor and preview |
 
 ### Components
 
@@ -296,6 +297,27 @@ The Preview component has `handleCopyHtml` and `handleDownloadHtml`. To add new 
 6. Apply `style.color` to each span
 7. Use ResizeObserver to reapply on container resize
 
+### Source Line Mapping (Cursor Position & Selection Sync)
+
+Enables bidirectional navigation and selection sync between editor and preview.
+
+**How it works:**
+1. Custom markdown-it renderer injects `data-source-line` and `data-source-line-end` attributes on block elements
+2. DOMPurify is configured to allow these custom attributes
+3. `EditorContext` provides navigation methods and highlight state
+
+**Editor → Preview:**
+- Click on a line number → scrolls preview to corresponding element with temporary highlight
+- Select text in editor → highlights overlapping elements in preview (green outline)
+
+**Preview → Editor:**
+- Click on any preview element → finds `data-source-line` attribute and focuses editor at that line
+
+**Key files:**
+- `utils/sourceMapping.ts` - markdown-it customization and mapping utilities
+- `contexts/EditorContext.tsx` - navigation methods and highlight state
+- `components/Preview.tsx` - click handler and highlight CSS
+
 ---
 
 ## Dependencies
@@ -332,3 +354,5 @@ The Preview component has `handleCopyHtml` and `handleDownloadHtml`. To add new 
 - **Font loading is lazy**: Google Fonts are loaded only when selected
 - **Settings panel vs Toolbar**: <1440px shows settings panel, ≥1440px shows inline toolbar controls
 - **Layout direction affects ResizablePanels**: `horizontal` = side-by-side, `vertical` = stacked
+- **Source line mapping is block-level**: Clicking navigates to the block element (paragraph, heading, list) containing the line, not character-level precision
+- **Selection highlight auto-clears**: Preview highlights clear when editor loses focus

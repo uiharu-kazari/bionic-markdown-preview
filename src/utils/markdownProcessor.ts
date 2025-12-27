@@ -1,14 +1,9 @@
-import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
 import { textVide } from 'text-vide';
 import type { BionicOptions } from '../types';
+import { createMarkdownItWithSourceMap, SOURCE_LINE_ATTR, SOURCE_LINE_END_ATTR } from './sourceMapping';
 
-const md = new MarkdownIt({
-  html: false,
-  breaks: true,
-  linkify: true,
-  typographer: true,
-});
+const md = createMarkdownItWithSourceMap();
 
 export function renderMarkdown(content: string): string {
   const rawHtml = md.render(content);
@@ -23,7 +18,7 @@ export function renderMarkdown(content: string): string {
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
       'div', 'span',
     ],
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel', SOURCE_LINE_ATTR, SOURCE_LINE_END_ATTR],
   });
 }
 

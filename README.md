@@ -74,5 +74,5 @@ src/
 
 ## Roadmap
 
-- [ ] **Cursor Position Mapping** - Maintain cursor position correspondence between raw Markdown text and rendered preview, allowing click-to-navigate between panels
-- [ ] **Text Selection Mapping** - Synchronize text selection between editor and preview, highlighting the corresponding region in the opposite panel when text is selected
+- [x] **Cursor Position Mapping** - Maintain cursor position correspondence between raw Markdown text and rendered preview, allowing click-to-navigate between panels
+- [x] **Text Selection Mapping** - Synchronize text selection between editor and preview, highlighting the corresponding region in the opposite panel when text is selected

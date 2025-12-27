@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { Copy, Download, Eye, EyeOff } from 'lucide-react';
 import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
+import { getSourceLineForElement, HIGHLIGHT_CLASS } from '../utils/sourceMapping';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
@@ -39,7 +40,13 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
   const articleRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<{ disconnect: () => void } | null>(null);
-  const { previewScrollRef, syncScrollFromPreview } = useEditorContext();
+  const { 
+    previewScrollRef, 
+    previewArticleRef,
+    syncScrollFromPreview,
+    navigateToEditorLine,
+    previewHighlight,
+  } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
 
   const processedHtml = useMemo(() => {
@@ -89,15 +96,57 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     };
   }, [gradientOptions, isDark, isGradientEnabled]);
 
+  // Register refs with context
   useEffect(() => {
     if (scrollContainerRef.current) {
       previewScrollRef.current = scrollContainerRef.current;
     }
-  }, [previewScrollRef]);
+    if (articleRef.current) {
+      previewArticleRef.current = articleRef.current;
+    }
+  }, [previewScrollRef, previewArticleRef]);
 
   const handleScroll = useCallback(() => {
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
+
+  // Handle click on preview to navigate to editor
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as Element;
+    
+    // Don't handle clicks on links
+    if (target.tagName === 'A' || target.closest('a')) return;
+    
+    const lineInfo = getSourceLineForElement(target);
+    if (lineInfo) {
+      navigateToEditorLine(lineInfo.start);
+    }
+  }, [navigateToEditorLine]);
+
+  // Apply highlight classes based on previewHighlight state
+  useEffect(() => {
+    if (!articleRef.current) return;
+
+    // Clear existing highlights
+    articleRef.current.querySelectorAll(`.${HIGHLIGHT_CLASS}`).forEach((el) => {
+      el.classList.remove(HIGHLIGHT_CLASS);
+    });
+
+    // Apply new highlights if any
+    if (previewHighlight) {
+      const elements = articleRef.current.querySelectorAll('[data-source-line]');
+      
+      elements.forEach((el) => {
+        const elStart = parseInt(el.getAttribute('data-source-line') || '-1', 10);
+        const elEnd = parseInt(el.getAttribute('data-source-line-end') || '-1', 10);
+
+        // Check if this element overlaps with the highlight range
+        if (elEnd > previewHighlight.startLine && elStart < previewHighlight.endLine) {
+          el.classList.add(HIGHLIGHT_CLASS);
+        }
+      });
+    }
+  }, [previewHighlight, processedHtml]);
 
   const handleCopyHtml = useCallback(async () => {
     try {
@@ -159,6 +208,26 @@ ${processedHtml}
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative">
+      <style>{`
+        .${HIGHLIGHT_CLASS} {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+          outline: 2px solid rgba(16, 185, 129, 0.4);
+          outline-offset: 2px;
+          border-radius: 4px;
+          transition: background-color 0.2s, outline 0.2s;
+        }
+        .dark .${HIGHLIGHT_CLASS} {
+          background-color: rgba(16, 185, 129, 0.2) !important;
+          outline-color: rgba(16, 185, 129, 0.5);
+        }
+        [data-source-line] {
+          cursor: pointer;
+          transition: background-color 0.15s;
+        }
+        [data-source-line]:hover {
+          background-color: rgba(148, 163, 184, 0.1);
+        }
+      `}</style>
       <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -205,6 +274,7 @@ ${processedHtml}
       >
         <article
           ref={articleRef}
+          onClick={handlePreviewClick}
           className="prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
           style={{
             fontSize: `${settings.fontSize}px`,

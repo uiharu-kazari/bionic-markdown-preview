@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { Copy, RotateCcw } from 'lucide-react';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getLineFromPosition } from '../utils/sourceMapping';
 import type { EditorSettings } from '../types';
 
 interface MarkdownEditorProps {
@@ -35,7 +36,14 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const { editorScrollRef, syncScrollFromEditor } = useEditorContext();
+  const { 
+    editorScrollRef, 
+    editorTextareaRef,
+    syncScrollFromEditor, 
+    navigateToPreviewLine,
+    editorHighlight,
+    setPreviewHighlight,
+  } = useEditorContext();
   const { t } = useLanguage();
 
   const handleReset = useCallback(() => {
@@ -82,14 +90,71 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     }
   }, [value]);
 
+  // Handle click on line number to navigate to preview
+  const handleLineNumberClick = useCallback((lineNumber: number) => {
+    navigateToPreviewLine(lineNumber - 1); // Convert to 0-indexed
+  }, [navigateToPreviewLine]);
+
+  // Handle selection change to highlight corresponding lines in preview
+  const handleSelectionChange = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || document.activeElement !== textarea) return;
+
+    const { selectionStart, selectionEnd } = textarea;
+    
+    if (selectionStart === selectionEnd) {
+      // No selection, clear highlight
+      setPreviewHighlight(null);
+      return;
+    }
+
+    // Get line numbers for selection
+    const startLine = getLineFromPosition(value, selectionStart);
+    const endLine = getLineFromPosition(value, selectionEnd);
+
+    setPreviewHighlight({
+      startLine: startLine - 1, // Convert to 0-indexed
+      endLine: endLine, // End is exclusive
+    });
+  }, [value, setPreviewHighlight]);
+
+  // Register refs with context
   useEffect(() => {
     if (textareaRef.current) {
       editorScrollRef.current = textareaRef.current;
+      editorTextareaRef.current = textareaRef.current;
     }
-  }, [editorScrollRef]);
+  }, [editorScrollRef, editorTextareaRef]);
+
+  // Listen for selection changes
+  useEffect(() => {
+    const handleSelect = () => handleSelectionChange();
+    document.addEventListener('selectionchange', handleSelect);
+    return () => document.removeEventListener('selectionchange', handleSelect);
+  }, [handleSelectionChange]);
+
+  // Clear preview highlight when focus leaves editor
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleBlur = () => {
+      setPreviewHighlight(null);
+    };
+
+    textarea.addEventListener('blur', handleBlur);
+    return () => textarea.removeEventListener('blur', handleBlur);
+  }, [setPreviewHighlight]);
 
   const lineCount = value.split('\n').length;
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
+
+  // Check if a line is highlighted
+  const isLineHighlighted = (lineNum: number) => {
+    if (!editorHighlight) return false;
+    const zeroIndexedLine = lineNum - 1;
+    return zeroIndexedLine >= editorHighlight.startLine && zeroIndexedLine < editorHighlight.endLine;
+  };
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900">
@@ -137,7 +202,13 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
             {lineNumbers.map((num) => (
               <div
                 key={num}
-                className="text-slate-400 dark:text-slate-500"
+                onClick={() => handleLineNumberClick(num)}
+                className={`cursor-pointer transition-colors ${
+                  isLineHighlighted(num)
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 -mx-3 px-3'
+                    : 'text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+                title={`Go to line ${num} in preview`}
               >
                 {num}
               </div>
