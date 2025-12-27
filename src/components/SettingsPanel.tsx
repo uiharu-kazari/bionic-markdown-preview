@@ -1,4 +1,4 @@
-import { X, ALargeSmall, AlignJustify, Globe } from 'lucide-react';
+import { X, ALargeSmall, AlignJustify, Globe, WrapText } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
 import { GRADIENT_THEME_LIST } from '../utils/colorUtils';
@@ -240,6 +240,27 @@ export function SettingsPanel({
                   onChange={(e) => onEditorSettingsChange({ lineHeight: Number(e.target.value) })}
                   className="w-full h-2 rounded-lg cursor-pointer"
                 />
+              </div>
+
+              <div>
+                <label className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                    <WrapText className="w-4 h-4" />
+                    {t.wordWrap}
+                  </span>
+                  <button
+                    onClick={() => onEditorSettingsChange({ wordWrap: !editorSettings.wordWrap })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                      editorSettings.wordWrap ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        editorSettings.wordWrap ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </label>
               </div>
 
               <div

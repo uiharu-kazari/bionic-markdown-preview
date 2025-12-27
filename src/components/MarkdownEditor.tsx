@@ -258,8 +258,9 @@ code blocks work too
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.fontFamily,
             lineHeight: settings.lineHeight,
-            whiteSpace: 'pre',
-            overflowX: 'auto',
+            whiteSpace: settings.wordWrap ? 'pre-wrap' : 'pre',
+            overflowWrap: settings.wordWrap ? 'break-word' : 'normal',
+            overflowX: settings.wordWrap ? 'hidden' : 'auto',
           }}
         />
       </div>

@@ -11,6 +11,7 @@ import {
   AlignJustify,
   Fullscreen,
   Minimize2,
+  WrapText,
 } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
 import { FontSelector } from './FontSelector';
@@ -153,6 +154,17 @@ export function Toolbar({
           )}
         </button>
         <button
+          onClick={() => onEditorSettingsChange({ wordWrap: !editorSettings.wordWrap })}
+          className={`p-2 rounded-lg transition-colors ${
+            editorSettings.wordWrap
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+          }`}
+          title={t.wordWrap}
+        >
+          <WrapText className="w-4 h-4" />
+        </button>
+        <button
           onClick={onPreviewOnlyToggle}
           className={`p-2 rounded-lg transition-colors ${
             previewOnly
@@ -194,6 +206,18 @@ export function Toolbar({
           ) : (
             <Rows className="w-5 h-5" />
           )}
+        </button>
+
+        <button
+          onClick={() => onEditorSettingsChange({ wordWrap: !editorSettings.wordWrap })}
+          className={`p-2 rounded-lg transition-colors ${
+            editorSettings.wordWrap
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+          }`}
+          title={t.wordWrap}
+        >
+          <WrapText className="w-5 h-5" />
         </button>
 
         <button

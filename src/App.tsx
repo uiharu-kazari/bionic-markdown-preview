@@ -33,6 +33,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   theme: 'light',
   previewFontFamily: '"Inter", sans-serif',
   layout: 'horizontal',
+  wordWrap: true, // Enable by default for better scroll sync
 };
 
 // Check if content matches any language's default
