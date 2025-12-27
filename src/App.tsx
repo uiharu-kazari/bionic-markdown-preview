@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Toolbar,
   SettingsPanel,
@@ -8,66 +8,9 @@ import {
 } from './components';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { loadGoogleFont, ALL_FONTS } from './utils/fonts';
+import { useLanguage } from './contexts/LanguageContext';
+import { defaultMarkdown } from './i18n/translations';
 import type { BionicOptions, EditorSettings, GradientOptions } from './types';
-
-const DEFAULT_MARKDOWN = `# Welcome to Bionic Markdown Preview
-
-This editor combines **Markdown** editing with Bionic preview to help you read faster and with better focus.
-
-## What is Bionic Preview?
-
-Bionic preview guides the eyes through text by emphasizing the **initial letters** of words. This helps your brain complete words faster, resulting in:
-
-- Faster reading speeds
-- Better comprehension
-- Reduced eye strain
-- Improved focus
-
-## How to Use
-
-1. Type your Markdown in the **left panel**
-2. See the live Bionic preview in the **right panel**
-3. Toggle Bionic preview ON/OFF using the button in the toolbar
-4. Adjust settings like bold amount using the settings panel
-
-## Markdown Features
-
-You can use all standard Markdown features:
-
-### Text Formatting
-
-- **Bold text** for emphasis
-- *Italic text* for style
-- ~~Strikethrough~~ for deletions
-
-### Code
-
-Inline \`code\` looks like this.
-
-\`\`\`javascript
-// Code blocks are not affected by Bionic preview
-function greet(name) {
-  return \`Hello, \${name}!\`;
-}
-\`\`\`
-
-### Blockquotes
-
-> "The only way to do great work is to love what you do."
-> — Steve Jobs
-
-### Lists
-
-- Item one
-- Item two
-  - Nested item
-  - Another nested item
-- Item three
-
----
-
-Start editing to see the magic happen!
-`;
 
 const DEFAULT_BIONIC_OPTIONS: BionicOptions = {
   enabled: true,
@@ -92,12 +35,22 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   layout: 'horizontal',
 };
 
+// Check if content matches any language's default
+function isDefaultContent(content: string): boolean {
+  return Object.values(defaultMarkdown).some(
+    (defaultContent) => content.trim() === defaultContent.trim()
+  );
+}
+
 function App() {
-  const [markdown, setMarkdown] = useLocalStorage('enhanced-md-content', DEFAULT_MARKDOWN);
+  const { language } = useLanguage();
+  const [markdown, setMarkdown] = useLocalStorage('enhanced-md-content', defaultMarkdown.en);
   const [bionicOptions, setBionicOptions] = useLocalStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS);
   const [gradientOptions, setGradientOptions] = useLocalStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS);
   const [editorSettings, setEditorSettings] = useLocalStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [previewOnly, setPreviewOnly] = useState(false);
+  const prevLanguageRef = useRef(language);
 
   useEffect(() => {
     if (editorSettings.theme === 'dark') {
@@ -111,6 +64,28 @@ function App() {
     const previewFont = ALL_FONTS.find(f => editorSettings.previewFontFamily.includes(f.family));
     if (previewFont) loadGoogleFont(previewFont.family);
   }, [editorSettings.previewFontFamily]);
+
+  // Update content when language changes, but only if it's still the default content
+  useEffect(() => {
+    if (prevLanguageRef.current !== language) {
+      if (isDefaultContent(markdown)) {
+        setMarkdown(defaultMarkdown[language]);
+      }
+      prevLanguageRef.current = language;
+    }
+  }, [language, markdown, setMarkdown]);
+
+  // Auto-switch to vertical layout on narrow screens (only on first load)
+  const NARROW_THRESHOLD = 768;
+  const initialLayoutCheckRef = useRef(false);
+  useEffect(() => {
+    if (!initialLayoutCheckRef.current) {
+      initialLayoutCheckRef.current = true;
+      if (window.innerWidth < NARROW_THRESHOLD && editorSettings.layout === 'horizontal') {
+        setEditorSettings((prev) => ({ ...prev, layout: 'vertical' }));
+      }
+    }
+  }, [editorSettings.layout, setEditorSettings]);
 
   const handleBionicToggle = useCallback(() => {
     setBionicOptions((prev) => ({ ...prev, enabled: !prev.enabled }));
@@ -142,6 +117,10 @@ function App() {
     }));
   }, [setEditorSettings]);
 
+  const handlePreviewOnlyToggle = useCallback(() => {
+    setPreviewOnly((prev) => !prev);
+  }, []);
+
 
   return (
     <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-900">
@@ -149,37 +128,49 @@ function App() {
         bionicOptions={bionicOptions}
         gradientOptions={gradientOptions}
         editorSettings={editorSettings}
+        previewOnly={previewOnly}
         onBionicOptionsChange={handleBionicOptionsChange}
         onGradientOptionsChange={handleGradientOptionsChange}
         onEditorSettingsChange={handleEditorSettingsChange}
         onSettingsToggle={() => setSettingsOpen(true)}
         onThemeToggle={handleThemeToggle}
         onLayoutToggle={handleLayoutToggle}
+        onPreviewOnlyToggle={handlePreviewOnlyToggle}
       />
 
       <main className="flex-1 overflow-hidden">
-        <ResizablePanels
-          leftPanel={
-            <MarkdownEditor
-              value={markdown}
-              onChange={setMarkdown}
-              settings={editorSettings}
-            />
-          }
-          rightPanel={
-            <Preview
-              markdown={markdown}
-              bionicOptions={bionicOptions}
-              gradientOptions={gradientOptions}
-              settings={editorSettings}
-              onBionicToggle={handleBionicToggle}
-            />
-          }
-          defaultSize={50}
-          minSize={25}
-          maxSize={75}
-          direction={editorSettings.layout}
-        />
+        {previewOnly ? (
+          <Preview
+            markdown={markdown}
+            bionicOptions={bionicOptions}
+            gradientOptions={gradientOptions}
+            settings={editorSettings}
+            onBionicToggle={handleBionicToggle}
+          />
+        ) : (
+          <ResizablePanels
+            leftPanel={
+              <MarkdownEditor
+                value={markdown}
+                onChange={setMarkdown}
+                settings={editorSettings}
+              />
+            }
+            rightPanel={
+              <Preview
+                markdown={markdown}
+                bionicOptions={bionicOptions}
+                gradientOptions={gradientOptions}
+                settings={editorSettings}
+                onBionicToggle={handleBionicToggle}
+              />
+            }
+            defaultSize={50}
+            minSize={25}
+            maxSize={75}
+            direction={editorSettings.layout}
+          />
+        )}
       </main>
 
       <SettingsPanel

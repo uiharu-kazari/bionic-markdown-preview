@@ -9,6 +9,8 @@ import {
   Rows,
   ALargeSmall,
   AlignJustify,
+  Fullscreen,
+  Minimize2,
 } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
 import { FontSelector } from './FontSelector';
@@ -21,24 +23,28 @@ interface ToolbarProps {
   bionicOptions: BionicOptions;
   gradientOptions: GradientOptions;
   editorSettings: EditorSettings;
+  previewOnly: boolean;
   onBionicOptionsChange: (options: Partial<BionicOptions>) => void;
   onGradientOptionsChange: (options: Partial<GradientOptions>) => void;
   onEditorSettingsChange: (settings: Partial<EditorSettings>) => void;
   onSettingsToggle: () => void;
   onThemeToggle: () => void;
   onLayoutToggle: () => void;
+  onPreviewOnlyToggle: () => void;
 }
 
 export function Toolbar({
   bionicOptions,
   gradientOptions,
   editorSettings,
+  previewOnly,
   onBionicOptionsChange,
   onGradientOptionsChange,
   onEditorSettingsChange,
   onSettingsToggle,
   onThemeToggle,
   onLayoutToggle,
+  onPreviewOnlyToggle,
 }: ToolbarProps) {
   const { t } = useLanguage();
 
@@ -135,7 +141,6 @@ export function Toolbar({
       </div>
 
       <div className="hidden min-[1440px]:flex items-center gap-1 flex-shrink-0 justify-end">
-        <LanguageSelector />
         <button
           onClick={onLayoutToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -145,6 +150,21 @@ export function Toolbar({
             <Columns className="w-4 h-4" />
           ) : (
             <Rows className="w-4 h-4" />
+          )}
+        </button>
+        <button
+          onClick={onPreviewOnlyToggle}
+          className={`p-2 rounded-lg transition-colors ${
+            previewOnly
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+          }`}
+          title={previewOnly ? t.exitPreviewOnly : t.previewOnly}
+        >
+          {previewOnly ? (
+            <Minimize2 className="w-4 h-4" />
+          ) : (
+            <Fullscreen className="w-4 h-4" />
           )}
         </button>
         <button
@@ -158,13 +178,12 @@ export function Toolbar({
             <Moon className="w-4 h-4" />
           )}
         </button>
+        <LanguageSelector />
       </div>
 
       <div className="flex-1 min-[1440px]:hidden" />
 
       <div className="flex min-[1440px]:hidden items-center gap-1 flex-shrink-0">
-        <LanguageSelector />
-
         <button
           onClick={onLayoutToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
@@ -174,6 +193,22 @@ export function Toolbar({
             <Columns className="w-5 h-5" />
           ) : (
             <Rows className="w-5 h-5" />
+          )}
+        </button>
+
+        <button
+          onClick={onPreviewOnlyToggle}
+          className={`p-2 rounded-lg transition-colors ${
+            previewOnly
+              ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+          }`}
+          title={previewOnly ? t.exitPreviewOnly : t.previewOnly}
+        >
+          {previewOnly ? (
+            <Minimize2 className="w-5 h-5" />
+          ) : (
+            <Fullscreen className="w-5 h-5" />
           )}
         </button>
 

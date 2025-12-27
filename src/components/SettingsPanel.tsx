@@ -1,9 +1,10 @@
-import { X, ALargeSmall, AlignJustify } from 'lucide-react';
+import { X, ALargeSmall, AlignJustify, Globe } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
 import { GRADIENT_THEME_LIST } from '../utils/colorUtils';
 import { Slider } from './Slider';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Language, languageNames } from '../i18n/translations';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -30,7 +31,8 @@ export function SettingsPanel({
   onGradientOptionsChange,
   onEditorSettingsChange,
 }: SettingsPanelProps) {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+  const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
 
   if (!isOpen) return null;
 
@@ -248,6 +250,37 @@ export function SettingsPanel({
                   <strong>Previ</strong>ew <strong>fo</strong>nt <strong>samp</strong>le
                 </p>
               </div>
+            </div>
+          </section>
+
+          <hr className="border-slate-200 dark:border-slate-700" />
+
+          <section>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-white mb-4 uppercase tracking-wide flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              {t.language}
+            </h3>
+
+            <div className="grid grid-cols-2 gap-2">
+              {languages.map((lang) => {
+                const isSelected = language === lang;
+
+                return (
+                  <button
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                    className={`
+                      flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all
+                      ${isSelected
+                        ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500'
+                        : 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }
+                    `}
+                  >
+                    {languageNames[lang]}
+                  </button>
+                );
+              })}
             </div>
           </section>
         </div>
