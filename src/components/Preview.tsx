@@ -243,15 +243,30 @@ ${processedHtml}
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative">
       <style>{`
-        .${SELECTION_HIGHLIGHT_CLASS} {
+        .${SELECTION_HIGHLIGHT_CLASS},
+        .${SELECTION_HIGHLIGHT_CLASS} * {
           background-color: rgba(16, 185, 129, 0.35) !important;
           border-radius: 2px;
+          /* Normalize all text to look identical */
+          color: rgb(30, 41, 59) !important;
+          font-weight: 500 !important;
+          font-style: normal !important;
+          text-decoration: none !important;
+          opacity: 1 !important;
+          -webkit-text-fill-color: rgb(30, 41, 59) !important;
+        }
+        .${SELECTION_HIGHLIGHT_CLASS} {
           box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
           padding: 1px 0;
           margin: -1px 0;
         }
-        .dark .${SELECTION_HIGHLIGHT_CLASS} {
+        .dark .${SELECTION_HIGHLIGHT_CLASS},
+        .dark .${SELECTION_HIGHLIGHT_CLASS} * {
           background-color: rgba(16, 185, 129, 0.45) !important;
+          color: rgb(226, 232, 240) !important;
+          -webkit-text-fill-color: rgb(226, 232, 240) !important;
+        }
+        .dark .${SELECTION_HIGHLIGHT_CLASS} {
           box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5);
         }
         .preview-cursor {
