@@ -38,6 +38,12 @@ export interface Translations {
   gradientSunset: string;
   gradientForest: string;
   gradientBerry: string;
+  gradientLavender: string;
+  gradientAutumn: string;
+  gradientMint: string;
+  gradientTwilight: string;
+  gradientCoffee: string;
+  gradientMonochrome: string;
 
   markdownEditor: string;
   copyMarkdown: string;
@@ -99,6 +105,12 @@ export const translations: Record<Language, Translations> = {
     gradientSunset: 'Sunset',
     gradientForest: 'Forest',
     gradientBerry: 'Berry',
+    gradientLavender: 'Lavender',
+    gradientAutumn: 'Autumn',
+    gradientMint: 'Mint',
+    gradientTwilight: 'Twilight',
+    gradientCoffee: 'Coffee',
+    gradientMonochrome: 'Monochrome',
 
     markdownEditor: 'Markdown Editor',
     copyMarkdown: 'Copy Markdown',
@@ -159,6 +171,12 @@ export const translations: Record<Language, Translations> = {
     gradientSunset: '日落',
     gradientForest: '森林',
     gradientBerry: '莓果',
+    gradientLavender: '薰衣草',
+    gradientAutumn: '秋叶',
+    gradientMint: '薄荷',
+    gradientTwilight: '暮光',
+    gradientCoffee: '咖啡',
+    gradientMonochrome: '黑白',
 
     markdownEditor: 'Markdown 编辑器',
     copyMarkdown: '复制 Markdown',
@@ -219,6 +237,12 @@ export const translations: Record<Language, Translations> = {
     gradientSunset: 'Coucher',
     gradientForest: 'Foret',
     gradientBerry: 'Baies',
+    gradientLavender: 'Lavande',
+    gradientAutumn: 'Automne',
+    gradientMint: 'Menthe',
+    gradientTwilight: 'Crépuscule',
+    gradientCoffee: 'Café',
+    gradientMonochrome: 'Monochrome',
 
     markdownEditor: 'Editeur Markdown',
     copyMarkdown: 'Copier Markdown',
@@ -279,6 +303,12 @@ export const translations: Record<Language, Translations> = {
     gradientSunset: 'サンセット',
     gradientForest: 'フォレスト',
     gradientBerry: 'ベリー',
+    gradientLavender: 'ラベンダー',
+    gradientAutumn: 'オータム',
+    gradientMint: 'ミント',
+    gradientTwilight: 'トワイライト',
+    gradientCoffee: 'コーヒー',
+    gradientMonochrome: 'モノクロ',
 
     markdownEditor: 'Markdown エディタ',
     copyMarkdown: 'Markdown をコピー',

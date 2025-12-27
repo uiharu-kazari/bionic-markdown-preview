@@ -91,6 +91,96 @@ const GRADIENT_THEMES: Record<GradientTheme, GradientThemeConfig> = {
     },
     previewColors: ['#db2777', '#a855f7', '#f43f5e', '#c026d3', '#ec4899'],
   },
+  lavender: {
+    id: 'lavender',
+    name: 'Lavender',
+    palette: {
+      name: 'Lavender',
+      colors: [
+        { h: 260, s: 60, l: 55 },
+        { h: 240, s: 55, l: 52 },
+        { h: 280, s: 50, l: 58 },
+        { h: 250, s: 58, l: 50 },
+        { h: 270, s: 52, l: 56 },
+      ],
+    },
+    previewColors: ['#8b5cf6', '#6366f1', '#a78bfa', '#7c3aed', '#818cf8'],
+  },
+  autumn: {
+    id: 'autumn',
+    name: 'Autumn',
+    palette: {
+      name: 'Autumn',
+      colors: [
+        { h: 25, s: 80, l: 42 },
+        { h: 40, s: 75, l: 40 },
+        { h: 15, s: 70, l: 45 },
+        { h: 35, s: 85, l: 38 },
+        { h: 45, s: 72, l: 44 },
+      ],
+    },
+    previewColors: ['#c2410c', '#a16207', '#b45309', '#92400e', '#a3730c'],
+  },
+  mint: {
+    id: 'mint',
+    name: 'Mint',
+    palette: {
+      name: 'Mint',
+      colors: [
+        { h: 168, s: 70, l: 40 },
+        { h: 158, s: 65, l: 42 },
+        { h: 175, s: 72, l: 38 },
+        { h: 165, s: 68, l: 44 },
+        { h: 155, s: 62, l: 40 },
+      ],
+    },
+    previewColors: ['#0d9488', '#059669', '#0f766e', '#10b981', '#047857'],
+  },
+  twilight: {
+    id: 'twilight',
+    name: 'Twilight',
+    palette: {
+      name: 'Twilight',
+      colors: [
+        { h: 245, s: 65, l: 48 },
+        { h: 260, s: 60, l: 45 },
+        { h: 230, s: 70, l: 50 },
+        { h: 275, s: 55, l: 46 },
+        { h: 250, s: 62, l: 52 },
+      ],
+    },
+    previewColors: ['#5b21b6', '#7c3aed', '#4338ca', '#8b5cf6', '#6366f1'],
+  },
+  coffee: {
+    id: 'coffee',
+    name: 'Coffee',
+    palette: {
+      name: 'Coffee',
+      colors: [
+        { h: 30, s: 50, l: 35 },
+        { h: 25, s: 55, l: 38 },
+        { h: 20, s: 45, l: 40 },
+        { h: 35, s: 52, l: 36 },
+        { h: 28, s: 48, l: 42 },
+      ],
+    },
+    previewColors: ['#78350f', '#92400e', '#854d0e', '#713f12', '#a16207'],
+  },
+  monochrome: {
+    id: 'monochrome',
+    name: 'Monochrome',
+    palette: {
+      name: 'Monochrome',
+      colors: [
+        { h: 215, s: 20, l: 35 },
+        { h: 215, s: 18, l: 40 },
+        { h: 215, s: 22, l: 32 },
+        { h: 215, s: 16, l: 45 },
+        { h: 215, s: 24, l: 38 },
+      ],
+    },
+    previewColors: ['#475569', '#64748b', '#334155', '#94a3b8', '#4b5563'],
+  },
 };
 
 export const GRADIENT_THEME_LIST: GradientThemeConfig[] = Object.values(GRADIENT_THEMES);
