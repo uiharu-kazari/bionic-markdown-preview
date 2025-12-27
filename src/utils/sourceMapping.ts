@@ -772,3 +772,155 @@ export function removeCursor(previewRoot: Element): void {
     }
   }
 }
+
+// Selection highlight class
+export const SELECTION_HIGHLIGHT_CLASS = 'preview-selection-highlight';
+
+/**
+ * Apply character-level selection highlighting to the preview.
+ * Wraps the selected characters in highlight spans.
+ */
+export function applySelectionHighlight(
+  previewRoot: Element,
+  sourceStart: number,
+  sourceEnd: number
+): void {
+  // First, remove any existing selection highlights
+  removeSelectionHighlight(previewRoot);
+  
+  if (sourceStart >= sourceEnd) return;
+
+  // Find all spans with source mapping that overlap the selection
+  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
+  
+  elements.forEach((el) => {
+    const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+    const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+    
+    if (elStart === -1 || elEnd === -1) return;
+    
+    // Check if this element overlaps with the selection
+    if (elEnd <= sourceStart || elStart >= sourceEnd) return;
+    
+    // Calculate the overlap
+    const overlapStart = Math.max(sourceStart, elStart);
+    const overlapEnd = Math.min(sourceEnd, elEnd);
+    
+    // Calculate proportional positions within this element
+    const elLength = elEnd - elStart;
+    const startRatio = (overlapStart - elStart) / elLength;
+    const endRatio = (overlapEnd - elStart) / elLength;
+    
+    // Apply highlighting to this element's text nodes
+    highlightTextNodesInElement(el, startRatio, endRatio);
+  });
+}
+
+/**
+ * Highlight text nodes within an element based on proportional positions
+ */
+function highlightTextNodesInElement(
+  element: Element,
+  startRatio: number,
+  endRatio: number
+): void {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  const textNodes: Text[] = [];
+  let totalLength = 0;
+  
+  // Collect all text nodes and total length
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    textNodes.push(node);
+    totalLength += node.textContent?.length || 0;
+  }
+  
+  if (totalLength === 0) return;
+  
+  // Calculate character positions
+  const startChar = Math.floor(startRatio * totalLength);
+  const endChar = Math.ceil(endRatio * totalLength);
+  
+  let currentPos = 0;
+  
+  for (const textNode of textNodes) {
+    const nodeLength = textNode.textContent?.length || 0;
+    const nodeStart = currentPos;
+    const nodeEnd = currentPos + nodeLength;
+    
+    // Check if this text node overlaps with selection
+    if (nodeEnd <= startChar || nodeStart >= endChar) {
+      currentPos = nodeEnd;
+      continue;
+    }
+    
+    // Calculate overlap within this text node
+    const highlightStart = Math.max(0, startChar - nodeStart);
+    const highlightEnd = Math.min(nodeLength, endChar - nodeStart);
+    
+    // Wrap the highlighted portion
+    wrapTextRange(textNode, highlightStart, highlightEnd);
+    
+    currentPos = nodeEnd;
+  }
+}
+
+/**
+ * Wrap a range of text in a highlight span
+ */
+function wrapTextRange(textNode: Text, start: number, end: number): void {
+  const text = textNode.textContent || '';
+  const parent = textNode.parentNode;
+  
+  if (!parent || start >= end || start < 0 || end > text.length) return;
+  
+  // Don't re-highlight already highlighted text
+  if (parent instanceof Element && parent.classList.contains(SELECTION_HIGHLIGHT_CLASS)) {
+    return;
+  }
+  
+  const beforeText = text.substring(0, start);
+  const highlightText = text.substring(start, end);
+  const afterText = text.substring(end);
+  
+  const fragment = document.createDocumentFragment();
+  
+  if (beforeText) {
+    fragment.appendChild(document.createTextNode(beforeText));
+  }
+  
+  const highlightSpan = document.createElement('span');
+  highlightSpan.className = SELECTION_HIGHLIGHT_CLASS;
+  highlightSpan.textContent = highlightText;
+  fragment.appendChild(highlightSpan);
+  
+  if (afterText) {
+    fragment.appendChild(document.createTextNode(afterText));
+  }
+  
+  parent.replaceChild(fragment, textNode);
+}
+
+/**
+ * Remove all selection highlighting from preview
+ */
+export function removeSelectionHighlight(previewRoot: Element): void {
+  const highlights = previewRoot.querySelectorAll(`.${SELECTION_HIGHLIGHT_CLASS}`);
+  
+  highlights.forEach((highlight) => {
+    const parent = highlight.parentNode;
+    if (!parent) return;
+    
+    // Replace highlight span with its text content
+    const textNode = document.createTextNode(highlight.textContent || '');
+    parent.replaceChild(textNode, highlight);
+    
+    // Normalize to merge adjacent text nodes
+    parent.normalize();
+  });
+}

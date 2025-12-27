@@ -4,11 +4,12 @@ import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
 import { 
   getCharacterPositionFromClick, 
-  HIGHLIGHT_CLASS,
   SOURCE_CHAR_START_ATTR,
-  SOURCE_CHAR_END_ATTR,
   insertCursorAtPosition,
   removeCursor,
+  applySelectionHighlight,
+  removeSelectionHighlight,
+  SELECTION_HIGHLIGHT_CLASS,
 } from '../utils/sourceMapping';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -132,40 +133,22 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
   }, [navigateToEditorChar]);
 
-  // Apply highlight classes based on previewHighlight state (character-based)
+  // Apply character-level selection highlighting
   useEffect(() => {
     if (!articleRef.current) return;
 
-    // Clear existing highlights
-    articleRef.current.querySelectorAll(`.${HIGHLIGHT_CLASS}`).forEach((el) => {
-      el.classList.remove(HIGHLIGHT_CLASS);
-    });
+    // Clear existing selection highlights
+    removeSelectionHighlight(articleRef.current);
 
-    // Apply new highlights if any
+    // Apply new character-level highlights if any
     if (previewHighlight) {
-      // Query elements with character position data
-      const elementsWithCharPos = articleRef.current.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
-      
-      elementsWithCharPos.forEach((el) => {
-        const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
-        const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
-
-        // Check if this element overlaps with the highlight range
-        if (elEnd > previewHighlight.charStart && elStart < previewHighlight.charEnd) {
-          el.classList.add(HIGHLIGHT_CLASS);
-        }
-      });
-
-      // Also check line-based elements as fallback
-      const elementsWithLinePos = articleRef.current.querySelectorAll('[data-source-line]');
-      elementsWithLinePos.forEach((el) => {
-        const elStart = parseInt(el.getAttribute('data-source-start') || '-1', 10);
-        const elEnd = parseInt(el.getAttribute('data-source-end') || '-1', 10);
-
-        if (elStart !== -1 && elEnd !== -1) {
-          if (elEnd > previewHighlight.charStart && elStart < previewHighlight.charEnd) {
-            el.classList.add(HIGHLIGHT_CLASS);
-          }
+      requestAnimationFrame(() => {
+        if (articleRef.current) {
+          applySelectionHighlight(
+            articleRef.current,
+            previewHighlight.charStart,
+            previewHighlight.charEnd
+          );
         }
       });
     }
@@ -257,16 +240,16 @@ ${processedHtml}
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative">
       <style>{`
-        .${HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.15) !important;
-          outline: 2px solid rgba(16, 185, 129, 0.4);
-          outline-offset: 2px;
-          border-radius: 4px;
-          transition: background-color 0.2s, outline 0.2s;
+        .${SELECTION_HIGHLIGHT_CLASS} {
+          background-color: rgba(16, 185, 129, 0.35) !important;
+          border-radius: 2px;
+          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
+          padding: 1px 0;
+          margin: -1px 0;
         }
-        .dark .${HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.2) !important;
-          outline-color: rgba(16, 185, 129, 0.5);
+        .dark .${SELECTION_HIGHLIGHT_CLASS} {
+          background-color: rgba(16, 185, 129, 0.45) !important;
+          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5);
         }
         .preview-cursor {
           display: inline-block;
