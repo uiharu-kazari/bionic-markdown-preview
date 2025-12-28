@@ -21,7 +21,7 @@ const DEFAULT_BIONIC_OPTIONS: BionicOptions = {
 };
 
 const DEFAULT_GRADIENT_OPTIONS: GradientOptions = {
-  theme: 'none',
+  theme: 'ocean',
   applyToHeadings: false,
   applyToLinks: false,
 };

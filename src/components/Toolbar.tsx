@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Settings,
-  FileText,
   Moon,
   Sun,
   Type,
@@ -56,10 +55,32 @@ export function Toolbar({
     <>
       <header className="flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
       <div className="flex items-center gap-2 min-[1440px]:gap-3 min-w-0 overflow-hidden relative z-0">
-        <FileText className="w-5 h-5 min-[1440px]:w-6 min-[1440px]:h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-        <h1 className="text-base min-[1440px]:text-xl font-bold text-slate-800 dark:text-white tracking-tight truncate">
-          <span className="hidden sm:inline">{t.appTitle}</span>
-          <span className="sm:hidden">{t.appTitleShort}</span>
+        {/* Bionic Icon - inverted colors for header */}
+        <svg 
+          className="w-6 h-6 min-[1440px]:w-7 min-[1440px]:h-7 flex-shrink-0" 
+          viewBox="0 0 16 16" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width="16" height="16" rx="4" className="fill-slate-100 dark:fill-slate-700"/>
+          <rect x="4" y="3" width="2" height="10" fill="#10b981"/>
+          <rect x="8" y="4" width="4" height="2" fill="#10b981"/>
+          <rect x="8" y="7" width="3" height="2" fill="#10b981"/>
+          <rect x="8" y="10" width="5" height="2" fill="#10b981"/>
+        </svg>
+        <h1 className="text-base min-[1440px]:text-xl font-extrabold tracking-tight truncate">
+          <span className="hidden sm:inline">
+            <span className="text-emerald-500">Bio</span>
+            <span className="text-slate-800 dark:text-white">nic </span>
+            <span className="text-emerald-500">Mark</span>
+            <span className="text-slate-800 dark:text-white">down </span>
+            <span className="text-emerald-500">Pre</span>
+            <span className="text-slate-800 dark:text-white">view</span>
+          </span>
+          <span className="sm:hidden">
+            <span className="text-emerald-500">Bio</span>
+            <span className="text-slate-800 dark:text-white">nic</span>
+          </span>
         </h1>
       </div>
 
