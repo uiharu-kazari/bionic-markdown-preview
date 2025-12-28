@@ -119,6 +119,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   const { 
     editorScrollRef, 
     editorTextareaRef,
+    lineHeightsRef,
     syncScrollFromEditor, 
     navigateToPreviewChar,
     editorHighlight,
@@ -129,6 +130,11 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   
   // Calculate line heights for wrapped text
   const lineHeights = useLineHeights(value, editorContainerRef, settings);
+  
+  // Update context with current line heights for scroll sync
+  useEffect(() => {
+    lineHeightsRef.current = lineHeights;
+  }, [lineHeights, lineHeightsRef]);
 
   const handleReset = useCallback(() => {
     const textarea = textareaRef.current;

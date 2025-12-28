@@ -653,8 +653,11 @@ export function getCharacterPositionFromClick(
     }
   }
   // WebKit/Blink API
-  else if (document.caretRangeFromPoint) {
-    range = document.caretRangeFromPoint(x, y);
+  else if ('caretRangeFromPoint' in document) {
+    const caretRange = (document as unknown as { caretRangeFromPoint: (x: number, y: number) => Range | null }).caretRangeFromPoint(x, y);
+    if (caretRange) {
+      range = caretRange;
+    }
   }
 
   if (range) {
@@ -886,118 +889,193 @@ export function clearPreviewHighlights(previewRoot: Element): void {
 }
 
 /**
- * Find the preview element closest to a given Y position in the viewport.
- * Used for element-anchored scroll sync.
+ * Find the preview element and its Y offset for a given source character position.
+ * Returns the element and how far into the element the position is (as a ratio 0-1).
  */
-export function getPreviewElementAtY(
-  previewRoot: Element,
-  scrollContainer: Element,
-  targetY: number
-): { element: Element; sourceStart: number; sourceEnd: number; offsetRatio: number } | null {
-  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
-  const containerRect = scrollContainer.getBoundingClientRect();
-  
-  // Convert targetY to absolute position relative to container
-  const absoluteY = targetY + scrollContainer.scrollTop;
-  
-  let bestElement: Element | null = null;
-  let bestSourceStart = 0;
-  let bestSourceEnd = 0;
-  let bestDistance = Infinity;
-  let bestOffsetRatio = 0;
-  
-  for (let i = 0; i < elements.length; i++) {
-    const el = elements[i];
-    const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
-    const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
-    
-    if (elStart === -1 || elEnd === -1) continue;
-    
-    const rect = el.getBoundingClientRect();
-    const elTop = rect.top - containerRect.top + scrollContainer.scrollTop;
-    const elBottom = elTop + rect.height;
-    
-    // Calculate distance from target Y to this element
-    let distance: number;
-    let offsetRatio = 0;
-    
-    if (absoluteY >= elTop && absoluteY <= elBottom) {
-      // Target is within this element
-      distance = 0;
-      offsetRatio = (absoluteY - elTop) / Math.max(1, rect.height);
-    } else if (absoluteY < elTop) {
-      distance = elTop - absoluteY;
-    } else {
-      distance = absoluteY - elBottom;
-    }
-    
-    // Prefer block-level elements (with line attributes) for scroll anchoring
-    const hasLineAttr = el.hasAttribute(SOURCE_LINE_ATTR);
-    const adjustedDistance = hasLineAttr ? distance : distance + 1000;
-    
-    if (adjustedDistance < bestDistance) {
-      bestElement = el;
-      bestSourceStart = elStart;
-      bestSourceEnd = elEnd;
-      bestDistance = adjustedDistance;
-      bestOffsetRatio = offsetRatio;
-    }
-  }
-  
-  if (bestElement) {
-    return { 
-      element: bestElement, 
-      sourceStart: bestSourceStart, 
-      sourceEnd: bestSourceEnd,
-      offsetRatio: bestOffsetRatio 
-    };
-  }
-  return null;
-}
-
-/**
- * Get the Y position of a preview element relative to scroll container.
- */
-export function getPreviewElementY(
-  element: Element,
-  scrollContainer: Element
-): number {
-  const containerRect = scrollContainer.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-  return elementRect.top - containerRect.top + scrollContainer.scrollTop;
-}
-
-/**
- * Find the first preview element for a given source character position.
- */
-export function getFirstPreviewElementForChar(
+export function findPreviewElementForChar(
   previewRoot: Element,
   charPos: number
-): Element | null {
+): { element: Element; ratio: number } | null {
   const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
   let bestElement: Element | null = null;
-  let bestSpecificity = Infinity;
-  
+  let bestRatio = 0;
+  let bestRange = Infinity;
+
   elements.forEach((el) => {
     const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
     const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
-    
+
     if (elStart === -1 || elEnd === -1) return;
+    if (charPos < elStart || charPos > elEnd) return;
+
+    const range = elEnd - elStart;
     
-    if (charPos >= elStart && charPos < elEnd) {
-      const specificity = elEnd - elStart;
-      // Prefer block-level elements for scroll anchoring
-      const hasLineAttr = el.hasAttribute(SOURCE_LINE_ATTR);
-      const adjustedSpecificity = hasLineAttr ? specificity : specificity + 100000;
-      
-      if (adjustedSpecificity < bestSpecificity) {
-        bestSpecificity = adjustedSpecificity;
-        bestElement = el;
-      }
+    // Prefer elements that contain the position and have smaller ranges (more specific)
+    if (range < bestRange) {
+      bestRange = range;
+      bestElement = el;
+      // Calculate how far into this element the position is (0-1)
+      bestRatio = range > 0 ? (charPos - elStart) / range : 0;
     }
   });
+
+  if (!bestElement) {
+    // Try to find the closest block-level element
+    const blockElements = previewRoot.querySelectorAll(`[${SOURCE_LINE_ATTR}]`);
+    blockElements.forEach((el) => {
+      const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+      const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+
+      if (elStart === -1 || elEnd === -1) return;
+      if (charPos < elStart || charPos > elEnd) return;
+
+      const range = elEnd - elStart;
+      if (range < bestRange) {
+        bestRange = range;
+        bestElement = el;
+        bestRatio = range > 0 ? (charPos - elStart) / range : 0;
+      }
+    });
+  }
+
+  return bestElement ? { element: bestElement, ratio: bestRatio } : null;
+}
+
+/**
+ * Calculate the Y position in the preview for a given source character position.
+ * Returns the scroll position that would place that content at the top of viewport.
+ */
+export function getPreviewScrollForChar(
+  previewRoot: Element,
+  scrollContainer: Element,
+  charPos: number
+): number | null {
+  const result = findPreviewElementForChar(previewRoot, charPos);
+  if (!result) return null;
+
+  const { element, ratio } = result;
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+
+  // Calculate offset within the element based on ratio
+  const elementOffset = ratio * elementRect.height;
+
+  // Calculate the scroll position to align this point with the top of the viewport
+  const scrollTop = scrollContainer.scrollTop + 
+    (elementRect.top - containerRect.top) + 
+    elementOffset;
+
+  return Math.max(0, scrollTop);
+}
+
+/**
+ * Calculate the character position that corresponds to the top of the visible editor area.
+ * Takes into account text wrapping.
+ */
+export function getCharAtEditorTop(
+  textarea: HTMLTextAreaElement,
+  lineHeights: number[]
+): number {
+  const text = textarea.value;
+  const lines = text.split('\n');
+  const scrollTop = textarea.scrollTop;
   
-  return bestElement;
+  // If we have calculated line heights, use them for accurate positioning
+  if (lineHeights.length > 0) {
+    let accumulatedHeight = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const lineHeight = lineHeights[i] || 0;
+      
+      if (accumulatedHeight + lineHeight > scrollTop) {
+        // This line is at the top of the viewport
+        // Calculate character position for start of this line
+        let charPos = 0;
+        for (let j = 0; j < i; j++) {
+          charPos += lines[j].length + 1; // +1 for newline
+        }
+        
+        // Add partial line offset if scrolled partway through the line
+        const lineProgress = (scrollTop - accumulatedHeight) / lineHeight;
+        const lineCharOffset = Math.floor(lineProgress * lines[i].length);
+        
+        return charPos + lineCharOffset;
+      }
+      
+      accumulatedHeight += lineHeight;
+    }
+    
+    // Scrolled past all content
+    return text.length;
+  }
+  
+  // Fallback: use simple line height calculation
+  const computedStyle = getComputedStyle(textarea);
+  const lineHeight = parseFloat(computedStyle.lineHeight) || 
+                     parseFloat(computedStyle.fontSize) * 1.6;
+  
+  const lineIndex = Math.floor(scrollTop / lineHeight);
+  
+  // Calculate character position for this line
+  let charPos = 0;
+  for (let i = 0; i < lineIndex && i < lines.length; i++) {
+    charPos += lines[i].length + 1;
+  }
+  
+  return charPos;
+}
+
+/**
+ * Calculate the editor scroll position for a given character position.
+ * Takes into account text wrapping.
+ */
+export function getEditorScrollForChar(
+  textarea: HTMLTextAreaElement,
+  charPos: number,
+  lineHeights: number[]
+): number {
+  const text = textarea.value;
+  const lines = text.split('\n');
+  
+  // Find which line this character is on
+  let currentPos = 0;
+  let targetLineIndex = 0;
+  let charOffsetInLine = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const lineLength = lines[i].length + 1; // +1 for newline
+    if (currentPos + lineLength > charPos) {
+      targetLineIndex = i;
+      charOffsetInLine = charPos - currentPos;
+      break;
+    }
+    currentPos += lineLength;
+    targetLineIndex = i;
+  }
+  
+  // Calculate scroll position
+  if (lineHeights.length > 0) {
+    let scrollTop = 0;
+    
+    for (let i = 0; i < targetLineIndex; i++) {
+      scrollTop += lineHeights[i] || 0;
+    }
+    
+    // Add partial line offset
+    const lineHeight = lineHeights[targetLineIndex] || 0;
+    const lineLength = lines[targetLineIndex]?.length || 1;
+    const lineProgress = charOffsetInLine / lineLength;
+    scrollTop += lineProgress * lineHeight;
+    
+    return Math.max(0, scrollTop);
+  }
+  
+  // Fallback: simple line height calculation
+  const computedStyle = getComputedStyle(textarea);
+  const lineHeight = parseFloat(computedStyle.lineHeight) || 
+                     parseFloat(computedStyle.fontSize) * 1.6;
+  
+  return Math.max(0, targetLineIndex * lineHeight);
 }
 
 // Legacy line-based functions for compatibility

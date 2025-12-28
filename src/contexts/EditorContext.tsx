@@ -2,9 +2,9 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect, ty
 import { 
   scrollPreviewToChar, 
   getLineFromPosition,
-  getFirstPreviewElementForChar,
-  getPreviewElementY,
-  getPreviewElementAtY,
+  getCharAtEditorTop,
+  getPreviewScrollForChar,
+  getEditorScrollForChar,
 } from '../utils/sourceMapping';
 
 interface CharacterHighlight {
@@ -20,6 +20,9 @@ interface EditorContextValue {
   // Element refs for source mapping
   editorTextareaRef: React.MutableRefObject<HTMLTextAreaElement | null>;
   previewArticleRef: React.MutableRefObject<HTMLElement | null>;
+  
+  // Line heights for wrapped text (updated by MarkdownEditor)
+  lineHeightsRef: React.MutableRefObject<number[]>;
   
   // Scroll sync
   syncScrollFromEditor: () => void;
@@ -55,6 +58,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const previewScrollRef = useRef<HTMLElement | null>(null);
   const editorTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previewArticleRef = useRef<HTMLElement | null>(null);
+  const lineHeightsRef = useRef<number[]>([]);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<number | null>(null);
   
@@ -101,145 +105,89 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     }, 0);
   }, []);
 
-  // Element-anchored scroll sync: Editor → Preview
+  // Content-based scroll sync: sync by finding which content is at viewport top
   const syncScrollFromEditor = useCallback(() => {
     if (!scrollSyncEnabled || isScrollingRef.current) return;
     
     const textarea = editorTextareaRef.current;
-    const preview = previewScrollRef.current;
     const article = previewArticleRef.current;
+    const scrollContainer = previewScrollRef.current;
     
-    if (!textarea || !preview || !article) return;
+    if (!textarea || !article || !scrollContainer) return;
 
-    const text = textarea.value;
-    if (!text) return;
-
-    // Find which character position is at the top of the editor viewport
-    const scrollTop = textarea.scrollTop;
-    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
-                       parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
+    // Find the character position at the top of the editor viewport
+    const charPos = getCharAtEditorTop(textarea, lineHeightsRef.current);
     
-    // Estimate line number at viewport top (accounting for padding)
-    const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop) || 16;
-    const estimatedLine = Math.floor((scrollTop - paddingTop) / lineHeight) + 1;
-    const clampedLine = Math.max(1, estimatedLine);
+    // Find the corresponding scroll position in preview
+    const previewScrollTop = getPreviewScrollForChar(article, scrollContainer, charPos);
     
-    // Get character position for this line
-    const lines = text.split('\n');
-    let charPos = 0;
-    for (let i = 0; i < clampedLine - 1 && i < lines.length; i++) {
-      charPos += lines[i].length + 1;
-    }
-    
-    // Calculate sub-line offset (how far into this line we are)
-    const lineStartScrollPos = (clampedLine - 1) * lineHeight + paddingTop;
-    const subLineRatio = Math.max(0, Math.min(1, (scrollTop - lineStartScrollPos) / lineHeight));
-    
-    // Find the preview element for this character position
-    const targetElement = getFirstPreviewElementForChar(article, charPos);
-    
-    if (targetElement) {
-      const elementY = getPreviewElementY(targetElement, preview);
-      const elementRect = targetElement.getBoundingClientRect();
-      
-      // Calculate target scroll position with sub-line offset
-      const targetScrollTop = elementY + (elementRect.height * subLineRatio) - paddingTop;
-      
+    if (previewScrollTop !== null) {
       isScrollingRef.current = true;
-      preview.scrollTop = Math.max(0, targetScrollTop);
+      scrollContainer.scrollTop = previewScrollTop;
       
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      
       scrollTimeoutRef.current = window.setTimeout(() => {
         isScrollingRef.current = false;
       }, 50);
-    } else {
-      // Fallback to ratio-based scrolling if no element found
-      const sourceScrollHeight = textarea.scrollHeight - textarea.clientHeight;
-      const targetScrollHeight = preview.scrollHeight - preview.clientHeight;
-      
-      if (sourceScrollHeight > 0 && targetScrollHeight > 0) {
-        const scrollRatio = textarea.scrollTop / sourceScrollHeight;
-        
-        isScrollingRef.current = true;
-        preview.scrollTop = scrollRatio * targetScrollHeight;
-        
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        scrollTimeoutRef.current = window.setTimeout(() => {
-          isScrollingRef.current = false;
-        }, 50);
-      }
     }
   }, [scrollSyncEnabled]);
 
-  // Element-anchored scroll sync: Preview → Editor
   const syncScrollFromPreview = useCallback(() => {
     if (!scrollSyncEnabled || isScrollingRef.current) return;
     
     const textarea = editorTextareaRef.current;
-    const preview = previewScrollRef.current;
     const article = previewArticleRef.current;
+    const scrollContainer = previewScrollRef.current;
     
-    if (!textarea || !preview || !article) return;
+    if (!textarea || !article || !scrollContainer) return;
 
-    const text = textarea.value;
-    if (!text) return;
-
-    // Find which preview element is at the top of the viewport
-    const paddingTop = parseFloat(getComputedStyle(preview).paddingTop) || 16;
-    const result = getPreviewElementAtY(article, preview, paddingTop);
+    // For preview-to-editor sync, find which element is at the top of preview viewport
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const elements = Array.from(article.querySelectorAll('[data-source-start]'));
     
-    if (result) {
-      const { sourceStart, sourceEnd, offsetRatio } = result;
+    let bestMatch: { rect: DOMRect; charStart: number; charEnd: number } | null = null;
+    let minDistance = Infinity;
+    
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+      const distanceFromTop = Math.abs(rect.top - containerRect.top);
       
-      // Find the line for this character position
-      const line = getLineFromPosition(text, sourceStart);
+      // Only consider elements that are at or near the top of viewport
+      if (rect.top >= containerRect.top - 10 && distanceFromTop < minDistance) {
+        minDistance = distanceFromTop;
+        bestMatch = {
+          rect,
+          charStart: parseInt(el.getAttribute('data-source-start') || '0', 10),
+          charEnd: parseInt(el.getAttribute('data-source-end') || '0', 10),
+        };
+      }
+    }
+    
+    if (bestMatch !== null) {
+      const { rect: topRect, charStart: topCharStart, charEnd: topCharEnd } = bestMatch;
       
-      // Calculate the line height for sub-line positioning
-      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
-                         parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
-      const editorPaddingTop = parseFloat(getComputedStyle(textarea).paddingTop) || 16;
+      // Calculate ratio within the element
+      const elementRatio = Math.max(0, (containerRect.top - topRect.top) / topRect.height);
       
-      // Calculate scroll position: line position + sub-line offset
-      const lineScrollPos = (line - 1) * lineHeight + editorPaddingTop;
+      // Adjust character position based on ratio
+      const adjustedCharPos = topCharStart + Math.floor(elementRatio * (topCharEnd - topCharStart));
       
-      // Estimate how many lines this element spans
-      const charRange = sourceEnd - sourceStart;
-      const estimatedLines = Math.max(1, Math.ceil(charRange / 80)); // Rough estimate
-      const subLineOffset = offsetRatio * estimatedLines * lineHeight;
-      
-      const targetScrollTop = lineScrollPos + subLineOffset - editorPaddingTop;
+      // Find editor scroll position for this character
+      const editorScrollTop = getEditorScrollForChar(textarea, adjustedCharPos, lineHeightsRef.current);
       
       isScrollingRef.current = true;
-      textarea.scrollTop = Math.max(0, targetScrollTop);
+      textarea.scrollTop = editorScrollTop;
       
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      
       scrollTimeoutRef.current = window.setTimeout(() => {
         isScrollingRef.current = false;
       }, 50);
-    } else {
-      // Fallback to ratio-based scrolling
-      const sourceScrollHeight = preview.scrollHeight - preview.clientHeight;
-      const targetScrollHeight = textarea.scrollHeight - textarea.clientHeight;
-      
-      if (sourceScrollHeight > 0 && targetScrollHeight > 0) {
-        const scrollRatio = preview.scrollTop / sourceScrollHeight;
-        
-        isScrollingRef.current = true;
-        textarea.scrollTop = scrollRatio * targetScrollHeight;
-        
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        scrollTimeoutRef.current = window.setTimeout(() => {
-          isScrollingRef.current = false;
-        }, 50);
-      }
     }
   }, [scrollSyncEnabled]);
 
@@ -356,6 +304,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
         previewScrollRef,
         editorTextareaRef,
         previewArticleRef,
+        lineHeightsRef,
         syncScrollFromEditor,
         syncScrollFromPreview,
         navigateToEditorChar,
