@@ -1,10 +1,12 @@
-import { X, ALargeSmall, AlignJustify, Globe } from 'lucide-react';
+import { useState } from 'react';
+import { X, ALargeSmall, AlignJustify, Globe, MessageSquare } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
 import { GRADIENT_THEME_LIST } from '../utils/colorUtils';
 import { Slider } from './Slider';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language, languageNames } from '../i18n/translations';
+import { FeedbackDialog } from './FeedbackDialog';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const { t, language, setLanguage } = useLanguage();
   const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   if (!isOpen) return null;
 
@@ -126,45 +129,24 @@ export function SettingsPanel({
               {t.gradientReading}
             </h3>
 
-            <div className="grid grid-cols-1 gap-2">
-              {GRADIENT_THEME_LIST.map((theme) => {
-                const isSelected = gradientOptions.theme === theme.id;
-                const themeName = t[`gradient${theme.id.charAt(0).toUpperCase() + theme.id.slice(1)}` as keyof typeof t] || theme.name;
-
-                return (
-                  <button
-                    key={theme.id}
-                    onClick={() => onGradientOptionsChange({ theme: theme.id as GradientTheme })}
-                    className={`
-                      flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all text-left
-                      ${isSelected
-                        ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500'
-                        : 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                      }
-                    `}
-                  >
-                    {theme.id === 'none' ? (
-                      <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center">
-                        <X className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                      </div>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full overflow-hidden flex">
-                        {theme.previewColors.slice(0, 4).map((color, idx) => (
-                          <div
-                            key={idx}
-                            className="flex-1 h-full"
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <span className="flex-1">{themeName}</span>
-                    {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    )}
-                  </button>
-                );
-              })}
+            <div>
+              <label className="block text-sm text-slate-600 dark:text-slate-300 mb-2">
+                {t.gradient}
+              </label>
+              <select
+                value={gradientOptions.theme}
+                onChange={(e) => onGradientOptionsChange({ theme: e.target.value as GradientTheme })}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              >
+                {GRADIENT_THEME_LIST.map((theme) => {
+                  const themeName = t[`gradient${theme.id.charAt(0).toUpperCase() + theme.id.slice(1)}` as keyof typeof t] || theme.name;
+                  return (
+                    <option key={theme.id} value={theme.id}>
+                      {themeName}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </section>
 
@@ -241,15 +223,6 @@ export function SettingsPanel({
                   className="w-full h-2 rounded-lg cursor-pointer"
                 />
               </div>
-
-              <div
-                className="p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900"
-                style={{ fontFamily: editorSettings.previewFontFamily }}
-              >
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  <strong>Previ</strong>ew <strong>fo</strong>nt <strong>samp</strong>le
-                </p>
-              </div>
             </div>
           </section>
 
@@ -282,9 +255,24 @@ export function SettingsPanel({
                 );
               })}
             </div>
+
+            <hr className="border-slate-200 dark:border-slate-700 mt-4" />
+
+            <button
+              onClick={() => setShowFeedbackDialog(true)}
+              className="w-full mt-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
+            >
+              <MessageSquare className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+              <span className="text-sm font-medium">{t.feedback}</span>
+            </button>
           </section>
         </div>
       </aside>
+
+      <FeedbackDialog
+        isOpen={showFeedbackDialog}
+        onClose={() => setShowFeedbackDialog(false)}
+      />
     </>
   );
 }

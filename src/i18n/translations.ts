@@ -64,6 +64,11 @@ export interface Translations {
   layoutVertical: string;
   previewOnly: string;
   exitPreviewOnly: string;
+  feedback: string;
+  feedbackPrompt: string;
+  feedbackDescription: string;
+  feedbackOpenForm: string;
+  feedbackCancel: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -131,6 +136,11 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: 'Vertical layout',
     previewOnly: 'Preview only',
     exitPreviewOnly: 'Exit preview only',
+    feedback: 'Feedback',
+    feedbackPrompt: 'Would you like to provide feedback?',
+    feedbackDescription: 'Your feedback helps us improve. Clicking the link below will open a Google Form in a new tab.',
+    feedbackOpenForm: 'Open Feedback Form',
+    feedbackCancel: 'Cancel',
   },
 
   zh: {
@@ -197,6 +207,11 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: '垂直布局',
     previewOnly: '仅预览',
     exitPreviewOnly: '退出仅预览',
+    feedback: '反馈',
+    feedbackPrompt: '您想要提供反馈吗？',
+    feedbackDescription: '您的反馈有助于我们改进。点击下面的链接将在新标签页中打开 Google 表单。',
+    feedbackOpenForm: '打开反馈表单',
+    feedbackCancel: '取消',
   },
 
   fr: {
@@ -263,6 +278,11 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: 'Disposition verticale',
     previewOnly: 'Apercu seul',
     exitPreviewOnly: 'Quitter apercu seul',
+    feedback: 'Commentaires',
+    feedbackPrompt: 'Souhaitez-vous donner votre avis ?',
+    feedbackDescription: 'Vos commentaires nous aident à nous améliorer. Cliquer sur le lien ci-dessous ouvrira un formulaire Google dans un nouvel onglet.',
+    feedbackOpenForm: 'Ouvrir le formulaire',
+    feedbackCancel: 'Annuler',
   },
 
   ja: {
@@ -329,6 +349,11 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: '縦並びレイアウト',
     previewOnly: 'プレビューのみ',
     exitPreviewOnly: 'プレビューのみを終了',
+    feedback: 'フィードバック',
+    feedbackPrompt: 'フィードバックを提供しますか？',
+    feedbackDescription: 'フィードバックは改善に役立ちます。下のリンクをクリックすると、新しいタブで Google フォームが開きます。',
+    feedbackOpenForm: 'フィードバックフォームを開く',
+    feedbackCancel: 'キャンセル',
   },
 };
 

@@ -3,6 +3,7 @@ export { SettingsPanel } from './SettingsPanel';
 export { MarkdownEditor } from './MarkdownEditor';
 export { Preview } from './Preview';
 export { ResizablePanels } from './ResizablePanels';
+export { FeedbackDialog } from './FeedbackDialog';
 export { FontSelector } from './FontSelector';
 export { GradientThemeSelector } from './GradientThemeSelector';
 export { Slider } from './Slider';

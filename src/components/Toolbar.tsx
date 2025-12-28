@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Settings,
   FileText,
@@ -11,6 +12,7 @@ import {
   AlignJustify,
   Fullscreen,
   Minimize2,
+  MessageSquare,
 } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
 import { FontSelector } from './FontSelector';
@@ -18,6 +20,7 @@ import { GradientThemeSelector } from './GradientThemeSelector';
 import { Slider } from './Slider';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '../contexts/LanguageContext';
+import { FeedbackDialog } from './FeedbackDialog';
 
 interface ToolbarProps {
   bionicOptions: BionicOptions;
@@ -47,9 +50,11 @@ export function Toolbar({
   onPreviewOnlyToggle,
 }: ToolbarProps) {
   const { t } = useLanguage();
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   return (
-    <header className="flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
+    <>
+      <header className="flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
       <div className="flex items-center gap-2 min-[1440px]:gap-3 min-w-0 overflow-hidden relative z-0">
         <FileText className="w-5 h-5 min-[1440px]:w-6 min-[1440px]:h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
         <h1 className="text-base min-[1440px]:text-xl font-bold text-slate-800 dark:text-white tracking-tight truncate">
@@ -179,6 +184,14 @@ export function Toolbar({
           )}
         </button>
         <LanguageSelector />
+        <button
+          onClick={() => setShowFeedbackDialog(true)}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm"
+          title={t.feedback}
+        >
+          <MessageSquare className="w-4 h-4 flex-shrink-0" />
+          <span className="hidden sm:inline">{t.feedback}</span>
+        </button>
       </div>
 
       <div className="flex-1 min-[1440px]:hidden" />
@@ -232,6 +245,12 @@ export function Toolbar({
           <Settings className="w-5 h-5" />
         </button>
       </div>
-    </header>
+      </header>
+
+      <FeedbackDialog
+        isOpen={showFeedbackDialog}
+        onClose={() => setShowFeedbackDialog(false)}
+      />
+    </>
   );
 }
