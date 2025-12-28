@@ -119,7 +119,7 @@ All application state lives in `App.tsx` using the `useLocalStorage` hook:
 
 | Component | Props | Notes |
 |-----------|-------|-------|
-| `MarkdownEditor` | `value`, `onChange`, `settings` | Textarea with line numbers, Tab key handling |
+| `MarkdownEditor` | `value`, `onChange`, `settings` | Textarea with dynamic line numbers, text wrapping, Tab key handling |
 | `Preview` | `markdown`, `bionicOptions`, `gradientOptions`, `settings`, `onBionicToggle` | Renders HTML, applies gradient post-mount |
 | `ResizablePanels` | `leftPanel`, `rightPanel`, `direction`, `defaultSize`, `minSize`, `maxSize` | Horizontal/vertical split with drag handle |
 | `Toolbar` | All options + handlers | Responsive: full controls ≥1440px, compact otherwise |
@@ -365,3 +365,4 @@ Enables bidirectional navigation and selection sync between editor and preview w
 - **Source mapping is character-precise**: Uses `caretPositionFromPoint`/`caretRangeFromPoint` APIs to map clicks to exact source positions
 - **Selection highlight auto-clears**: Preview highlights clear when editor loses focus
 - **Markdown syntax stripped for mapping**: Bold markers (**), headings (#), etc. are handled correctly in position calculations
+- **Editor text wrapping**: Text wraps in the editor (pre-wrap) and line numbers dynamically adjust height to match wrapped lines using `useLineHeights` hook with ResizeObserver
