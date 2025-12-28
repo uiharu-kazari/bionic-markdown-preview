@@ -1,9 +1,88 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
 import { Copy, RotateCcw } from 'lucide-react';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getPositionForLine } from '../utils/sourceMapping';
 import type { EditorSettings } from '../types';
+
+/**
+ * Calculate the visual height of each line when text wraps.
+ * Returns an array of heights (in pixels) for each logical line.
+ */
+function useLineHeights(
+  value: string,
+  containerRef: React.RefObject<HTMLDivElement>,
+  settings: EditorSettings
+): number[] {
+  const [lineHeights, setLineHeights] = useState<number[]>([]);
+  const measureRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create a hidden measuring element
+    const measureDiv = document.createElement('div');
+    measureDiv.style.cssText = `
+      position: absolute;
+      visibility: hidden;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      font-size: ${settings.fontSize}px;
+      font-family: ${settings.fontFamily};
+      line-height: ${settings.lineHeight};
+      padding: 0;
+      margin: 0;
+      border: none;
+    `;
+    container.appendChild(measureDiv);
+    measureRef.current = measureDiv;
+
+    const calculateHeights = () => {
+      if (!measureRef.current) return;
+      
+      // Get the width of the textarea (excluding padding)
+      const textarea = container.querySelector('textarea');
+      if (!textarea) return;
+      
+      const computedStyle = getComputedStyle(textarea);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft);
+      const paddingRight = parseFloat(computedStyle.paddingRight);
+      const width = textarea.clientWidth - paddingLeft - paddingRight;
+      
+      measureRef.current.style.width = `${width}px`;
+      
+      const lines = value.split('\n');
+      const heights: number[] = [];
+      
+      for (const line of lines) {
+        // Empty lines still take up one line height
+        measureRef.current.textContent = line || '\u00A0';
+        heights.push(measureRef.current.offsetHeight);
+      }
+      
+      setLineHeights(heights);
+    };
+
+    // Calculate initially
+    calculateHeights();
+
+    // Recalculate on resize
+    const resizeObserver = new ResizeObserver(() => {
+      calculateHeights();
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+      measureDiv.remove();
+      measureRef.current = null;
+    };
+  }, [value, settings.fontSize, settings.fontFamily, settings.lineHeight, containerRef]);
+
+  return lineHeights;
+}
 
 interface MarkdownEditorProps {
   value: string;
@@ -35,6 +114,7 @@ function Tooltip({ text, children }: TooltipProps) {
 export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const { 
     editorScrollRef, 
@@ -46,6 +126,9 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     setEditorCursorPosition,
   } = useEditorContext();
   const { t } = useLanguage();
+  
+  // Calculate line heights for wrapped text
+  const lineHeights = useLineHeights(value, editorContainerRef, settings);
 
   const handleReset = useCallback(() => {
     const textarea = textareaRef.current;
@@ -175,6 +258,11 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     return editorHighlight.charEnd > lineStart && editorHighlight.charStart < lineEnd;
   };
 
+  // Get base line height for fallback
+  const baseLineHeight = useMemo(() => {
+    return settings.fontSize * settings.lineHeight;
+  }, [settings.fontSize, settings.lineHeight]);
+
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900">
       <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -207,31 +295,39 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
           {lineCount} {t.lines} | {value.length} {t.chars}
         </span>
       </div>
-      <div className="flex-1 flex overflow-hidden">
+      <div ref={editorContainerRef} className="flex-1 flex overflow-hidden relative">
         <div
           ref={lineNumbersRef}
           className="flex-shrink-0 overflow-hidden select-none bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700"
           style={{
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.fontFamily,
-            lineHeight: settings.lineHeight,
           }}
         >
           <div className="pt-4 pb-[50vh] px-3 text-right">
-            {lineNumbers.map((num) => (
-              <div
-                key={num}
-                onClick={() => handleLineNumberClick(num)}
-                className={`cursor-pointer transition-colors ${
-                  isLineHighlighted(num)
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 -mx-3 px-3'
-                    : 'text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
-                }`}
-                title={`Go to line ${num} in preview`}
-              >
-                {num}
-              </div>
-            ))}
+            {lineNumbers.map((num) => {
+              // Use calculated height or fallback to base line height
+              const height = lineHeights[num - 1] || baseLineHeight;
+              
+              return (
+                <div
+                  key={num}
+                  onClick={() => handleLineNumberClick(num)}
+                  className={`flex items-start justify-end cursor-pointer transition-colors ${
+                    isLineHighlighted(num)
+                      ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 -mx-3 px-3'
+                      : 'text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400'
+                  }`}
+                  style={{ 
+                    height: `${height}px`,
+                    lineHeight: settings.lineHeight,
+                  }}
+                  title={`Go to line ${num} in preview`}
+                >
+                  {num}
+                </div>
+              );
+            })}
           </div>
         </div>
         <textarea
@@ -258,9 +354,10 @@ code blocks work too
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.fontFamily,
             lineHeight: settings.lineHeight,
-            whiteSpace: settings.wordWrap ? 'pre-wrap' : 'pre',
-            overflowWrap: settings.wordWrap ? 'break-word' : 'normal',
-            overflowX: settings.wordWrap ? 'hidden' : 'auto',
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            overflowX: 'hidden',
           }}
         />
       </div>

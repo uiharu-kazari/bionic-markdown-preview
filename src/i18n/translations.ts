@@ -64,7 +64,6 @@ export interface Translations {
   layoutVertical: string;
   previewOnly: string;
   exitPreviewOnly: string;
-  wordWrap: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -132,7 +131,6 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: 'Vertical layout',
     previewOnly: 'Preview only',
     exitPreviewOnly: 'Exit preview only',
-    wordWrap: 'Word Wrap',
   },
 
   zh: {
@@ -199,7 +197,6 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: '垂直布局',
     previewOnly: '仅预览',
     exitPreviewOnly: '退出仅预览',
-    wordWrap: '自动换行',
   },
 
   fr: {
@@ -266,7 +263,6 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: 'Disposition verticale',
     previewOnly: 'Apercu seul',
     exitPreviewOnly: 'Quitter apercu seul',
-    wordWrap: 'Retour à la ligne',
   },
 
   ja: {
@@ -333,7 +329,6 @@ export const translations: Record<Language, Translations> = {
     layoutVertical: '縦並びレイアウト',
     previewOnly: 'プレビューのみ',
     exitPreviewOnly: 'プレビューのみを終了',
-    wordWrap: '折り返し',
   },
 };
 
