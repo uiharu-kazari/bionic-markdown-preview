@@ -885,6 +885,121 @@ export function clearPreviewHighlights(previewRoot: Element): void {
   });
 }
 
+/**
+ * Find the preview element closest to a given Y position in the viewport.
+ * Used for element-anchored scroll sync.
+ */
+export function getPreviewElementAtY(
+  previewRoot: Element,
+  scrollContainer: Element,
+  targetY: number
+): { element: Element; sourceStart: number; sourceEnd: number; offsetRatio: number } | null {
+  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
+  const containerRect = scrollContainer.getBoundingClientRect();
+  
+  // Convert targetY to absolute position relative to container
+  const absoluteY = targetY + scrollContainer.scrollTop;
+  
+  let bestElement: Element | null = null;
+  let bestSourceStart = 0;
+  let bestSourceEnd = 0;
+  let bestDistance = Infinity;
+  let bestOffsetRatio = 0;
+  
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
+    const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+    const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+    
+    if (elStart === -1 || elEnd === -1) continue;
+    
+    const rect = el.getBoundingClientRect();
+    const elTop = rect.top - containerRect.top + scrollContainer.scrollTop;
+    const elBottom = elTop + rect.height;
+    
+    // Calculate distance from target Y to this element
+    let distance: number;
+    let offsetRatio = 0;
+    
+    if (absoluteY >= elTop && absoluteY <= elBottom) {
+      // Target is within this element
+      distance = 0;
+      offsetRatio = (absoluteY - elTop) / Math.max(1, rect.height);
+    } else if (absoluteY < elTop) {
+      distance = elTop - absoluteY;
+    } else {
+      distance = absoluteY - elBottom;
+    }
+    
+    // Prefer block-level elements (with line attributes) for scroll anchoring
+    const hasLineAttr = el.hasAttribute(SOURCE_LINE_ATTR);
+    const adjustedDistance = hasLineAttr ? distance : distance + 1000;
+    
+    if (adjustedDistance < bestDistance) {
+      bestElement = el;
+      bestSourceStart = elStart;
+      bestSourceEnd = elEnd;
+      bestDistance = adjustedDistance;
+      bestOffsetRatio = offsetRatio;
+    }
+  }
+  
+  if (bestElement) {
+    return { 
+      element: bestElement, 
+      sourceStart: bestSourceStart, 
+      sourceEnd: bestSourceEnd,
+      offsetRatio: bestOffsetRatio 
+    };
+  }
+  return null;
+}
+
+/**
+ * Get the Y position of a preview element relative to scroll container.
+ */
+export function getPreviewElementY(
+  element: Element,
+  scrollContainer: Element
+): number {
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  return elementRect.top - containerRect.top + scrollContainer.scrollTop;
+}
+
+/**
+ * Find the first preview element for a given source character position.
+ */
+export function getFirstPreviewElementForChar(
+  previewRoot: Element,
+  charPos: number
+): Element | null {
+  const elements = previewRoot.querySelectorAll(`[${SOURCE_CHAR_START_ATTR}]`);
+  let bestElement: Element | null = null;
+  let bestSpecificity = Infinity;
+  
+  elements.forEach((el) => {
+    const elStart = parseInt(el.getAttribute(SOURCE_CHAR_START_ATTR) || '-1', 10);
+    const elEnd = parseInt(el.getAttribute(SOURCE_CHAR_END_ATTR) || '-1', 10);
+    
+    if (elStart === -1 || elEnd === -1) return;
+    
+    if (charPos >= elStart && charPos < elEnd) {
+      const specificity = elEnd - elStart;
+      // Prefer block-level elements for scroll anchoring
+      const hasLineAttr = el.hasAttribute(SOURCE_LINE_ATTR);
+      const adjustedSpecificity = hasLineAttr ? specificity : specificity + 100000;
+      
+      if (adjustedSpecificity < bestSpecificity) {
+        bestSpecificity = adjustedSpecificity;
+        bestElement = el;
+      }
+    }
+  });
+  
+  return bestElement;
+}
+
 // Legacy line-based functions for compatibility
 export function getPreviewElementsForLine(
   previewRoot: Element,
