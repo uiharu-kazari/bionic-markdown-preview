@@ -195,10 +195,20 @@ export function applyGradientReading(
     return;
   }
 
-  removeGradient(previewRoot);
-
   const palette = getPalette(options, isDark);
   if (!palette) return;
+
+  // Check if gradient spans already exist - if so, just update colors
+  const existingSpans = previewRoot.querySelectorAll(`[${GRADIENT_DATA_ATTR}]`);
+  if (existingSpans.length > 0) {
+    // Update colors in place without removing/recreating spans
+    updateGradientColors(previewRoot, palette);
+    return;
+  }
+
+  // First time: create spans and apply colors
+  removeGradient(previewRoot);
+
   const spans = wrapTextNodesInSpans(previewRoot, options);
   const lines = groupSpansByLine(spans);
 
@@ -214,6 +224,39 @@ export function applyGradientReading(
   });
 
   previewRoot.setAttribute('data-gradient-applied', 'true');
+}
+
+function updateGradientColors(previewRoot: Element, palette: HSL[]): void {
+  const gradientSpans = previewRoot.querySelectorAll(`[${GRADIENT_DATA_ATTR}]`);
+  if (gradientSpans.length === 0) return;
+
+  // Collect spans with their current positions
+  const spans: WordSpan[] = [];
+  gradientSpans.forEach((el) => {
+    const span = el as HTMLSpanElement;
+    const rect = span.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      spans.push({
+        element: span,
+        rect,
+        text: span.textContent || '',
+      });
+    }
+  });
+
+  // Group by line and reapply colors
+  const lines = groupSpansByLine(spans);
+
+  lines.forEach((line, index) => {
+    const paletteLength = palette.length;
+    const startColorIndex = index % paletteLength;
+    const endColorIndex = (index + 1) % paletteLength;
+
+    const startColor = palette[startColorIndex];
+    const endColor = palette[endColorIndex];
+
+    applyGradientToLine(line, startColor, endColor);
+  });
 }
 
 export function removeGradient(previewRoot: Element): void {

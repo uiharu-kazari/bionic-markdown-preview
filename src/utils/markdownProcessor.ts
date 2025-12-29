@@ -35,7 +35,7 @@ export function renderMarkdown(content: string): string {
 
 export function applyBionicReading(
   html: string,
-  options: BionicOptions
+  options: Omit<BionicOptions, 'dimOpacity'>
 ): string {
   if (!options.enabled) {
     return html;
@@ -46,7 +46,6 @@ export function applyBionicReading(
 
   const skipTags = new Set(['CODE', 'PRE', 'A', 'SCRIPT', 'STYLE']);
   const highlightTag = options.highlightTag.toUpperCase();
-  const dimOpacity = options.dimOpacity / 100;
 
   function processNode(node: Node): void {
     if (node.nodeType === Node.TEXT_NODE && node.textContent) {
@@ -75,9 +74,8 @@ export function applyBionicReading(
           if (sourceTextAttr !== null) wrapper.setAttribute(SOURCE_TEXT_ATTR, sourceTextAttr);
         }
 
-        if (dimOpacity < 1) {
-          applyDimming(wrapper, highlightTag, dimOpacity);
-        }
+        // Apply dimming class to non-emphasized text (opacity controlled via CSS variable)
+        applyDimming(wrapper, highlightTag);
 
         if (node.parentNode) {
           node.parentNode.replaceChild(wrapper, node);
@@ -96,17 +94,17 @@ export function applyBionicReading(
   return doc.body.innerHTML;
 }
 
-function applyDimming(container: HTMLElement, highlightTag: string, opacity: number): void {
+function applyDimming(container: HTMLElement, highlightTag: string): void {
   Array.from(container.childNodes).forEach(node => {
     if (node.nodeType === Node.TEXT_NODE && node.textContent && node.textContent.trim()) {
       const dimSpan = document.createElement('span');
-      dimSpan.style.opacity = String(opacity);
+      dimSpan.className = 'bionic-dim';
       dimSpan.textContent = node.textContent;
       node.parentNode?.replaceChild(dimSpan, node);
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as HTMLElement;
       if (element.tagName !== highlightTag) {
-        element.style.opacity = String(opacity);
+        element.classList.add('bionic-dim');
       }
     }
   });
@@ -114,7 +112,7 @@ function applyDimming(container: HTMLElement, highlightTag: string, opacity: num
 
 export function processMarkdownToBionic(
   markdown: string,
-  bionicOptions: BionicOptions
+  bionicOptions: Omit<BionicOptions, 'dimOpacity'>
 ): string {
   const html = renderMarkdown(markdown);
   return applyBionicReading(html, bionicOptions);

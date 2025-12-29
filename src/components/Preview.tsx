@@ -60,11 +60,16 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Memoize HTML processing without dimOpacity - opacity is applied via CSS variable
   const processedHtml = useMemo(() => {
-    return processMarkdownToBionic(markdown, bionicOptions);
-  }, [markdown, bionicOptions]);
+    const { dimOpacity: _, ...bionicOptionsWithoutOpacity } = bionicOptions;
+    return processMarkdownToBionic(markdown, bionicOptionsWithoutOpacity);
+  }, [markdown, bionicOptions.enabled, bionicOptions.fixationPoint, bionicOptions.highlightTag, bionicOptions.highlightClass]);
 
   const debouncedHtml = useDebounce(processedHtml, 150);
+  
+  // CSS variable for dim opacity - changes without re-rendering HTML
+  const dimOpacity = bionicOptions.dimOpacity / 100;
 
   const isDark = settings.theme === 'dark';
 
@@ -261,6 +266,9 @@ ${processedHtml}
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative">
       <style>{`
+        .bionic-dim {
+          opacity: var(--bionic-dim-opacity, 1);
+        }
         .${SELECTION_HIGHLIGHT_CLASS},
         .${SELECTION_HIGHLIGHT_CLASS} * {
           background-color: rgba(16, 185, 129, 0.35) !important;
@@ -366,6 +374,7 @@ ${processedHtml}
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.previewFontFamily,
             '--prose-line-height': settings.lineHeight,
+            '--bionic-dim-opacity': dimOpacity,
           } as React.CSSProperties}
           dangerouslySetInnerHTML={{ __html: processedHtml }}
         />
