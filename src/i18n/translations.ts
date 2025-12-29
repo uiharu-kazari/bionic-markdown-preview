@@ -69,6 +69,9 @@ export interface Translations {
   feedbackDescription: string;
   feedbackOpenForm: string;
   feedbackCancel: string;
+  support: string;
+  supportDescription: string;
+  moreMenu: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -141,6 +144,9 @@ export const translations: Record<Language, Translations> = {
     feedbackDescription: 'Your feedback helps us improve. Clicking the link below will open a Google Form in a new tab.',
     feedbackOpenForm: 'Open Feedback Form',
     feedbackCancel: 'Cancel',
+    support: 'Support',
+    supportDescription: 'Support development on Ko-fi',
+    moreMenu: 'More',
   },
 
   zh: {
@@ -212,6 +218,9 @@ export const translations: Record<Language, Translations> = {
     feedbackDescription: '您的反馈有助于我们改进。点击下面的链接将在新标签页中打开 Google 表单。',
     feedbackOpenForm: '打开反馈表单',
     feedbackCancel: '取消',
+    support: '支持',
+    supportDescription: '在 Ko-fi 上支持开发',
+    moreMenu: '更多',
   },
 
   fr: {
@@ -283,6 +292,9 @@ export const translations: Record<Language, Translations> = {
     feedbackDescription: 'Vos commentaires nous aident à nous améliorer. Cliquer sur le lien ci-dessous ouvrira un formulaire Google dans un nouvel onglet.',
     feedbackOpenForm: 'Ouvrir le formulaire',
     feedbackCancel: 'Annuler',
+    support: 'Soutenir',
+    supportDescription: 'Soutenez le développement sur Ko-fi',
+    moreMenu: 'Plus',
   },
 
   ja: {
@@ -354,6 +366,9 @@ export const translations: Record<Language, Translations> = {
     feedbackDescription: 'フィードバックは改善に役立ちます。下のリンクをクリックすると、新しいタブで Google フォームが開きます。',
     feedbackOpenForm: 'フィードバックフォームを開く',
     feedbackCancel: 'キャンセル',
+    support: 'サポート',
+    supportDescription: 'Ko-fiで開発をサポート',
+    moreMenu: 'その他',
   },
 };
 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Settings,
   Moon,
@@ -11,15 +10,13 @@ import {
   AlignJustify,
   Fullscreen,
   Minimize2,
-  MessageSquare,
 } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
 import { FontSelector } from './FontSelector';
 import { GradientThemeSelector } from './GradientThemeSelector';
 import { Slider } from './Slider';
-import { LanguageSelector } from './LanguageSelector';
+import { MoreMenu } from './MoreMenu';
 import { useLanguage } from '../contexts/LanguageContext';
-import { FeedbackDialog } from './FeedbackDialog';
 
 interface ToolbarProps {
   bionicOptions: BionicOptions;
@@ -49,7 +46,6 @@ export function Toolbar({
   onPreviewOnlyToggle,
 }: ToolbarProps) {
   const { t } = useLanguage();
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   return (
     <>
@@ -204,15 +200,7 @@ export function Toolbar({
             <Moon className="w-4 h-4" />
           )}
         </button>
-        <LanguageSelector />
-        <button
-          onClick={() => setShowFeedbackDialog(true)}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm"
-          title={t.feedback}
-        >
-          <MessageSquare className="w-4 h-4 flex-shrink-0" />
-          <span className="hidden sm:inline">{t.feedback}</span>
-        </button>
+        <MoreMenu />
       </div>
 
       <div className="flex-1 min-[1440px]:hidden" />
@@ -267,11 +255,6 @@ export function Toolbar({
         </button>
       </div>
       </header>
-
-      <FeedbackDialog
-        isOpen={showFeedbackDialog}
-        onClose={() => setShowFeedbackDialog(false)}
-      />
     </>
   );
 }

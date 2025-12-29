@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { X, ALargeSmall, AlignJustify, Globe, MessageSquare } from 'lucide-react';
+import { X, ALargeSmall, AlignJustify, Globe, MessageSquare, Heart, ExternalLink } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
 import { GRADIENT_THEME_LIST } from '../utils/colorUtils';
 import { Slider } from './Slider';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language, languageNames } from '../i18n/translations';
-import { FeedbackDialog } from './FeedbackDialog';
+
+const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe7mHo47nveeSDXLTPIba4BBI_qcIORTk4ObJMY-Slf8xrrOQ/viewform?usp=dialog';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -35,7 +35,6 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const { t, language, setLanguage } = useLanguage();
   const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   if (!isOpen) return null;
 
@@ -258,21 +257,36 @@ export function SettingsPanel({
 
             <hr className="border-slate-200 dark:border-slate-700 mt-4" />
 
-            <button
-              onClick={() => setShowFeedbackDialog(true)}
-              className="w-full mt-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
+            <a
+              href={FEEDBACK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mt-4 flex items-center justify-between px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
             >
-              <MessageSquare className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-              <span className="text-sm font-medium">{t.feedback}</span>
-            </button>
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium">{t.feedback}</span>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors flex-shrink-0" />
+            </a>
+
+            <a
+              href="https://ko-fi.com/illyasviel1120"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mt-2 flex items-center justify-between px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Heart className="w-5 h-5 text-rose-500 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                  {t.support}
+                </span>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-rose-500 transition-colors flex-shrink-0" />
+            </a>
           </section>
         </div>
       </aside>
-
-      <FeedbackDialog
-        isOpen={showFeedbackDialog}
-        onClose={() => setShowFeedbackDialog(false)}
-      />
     </>
   );
 }
