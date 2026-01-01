@@ -21,3 +21,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# MCP screenshots
+.playwright-mcp/
+
+# Bolt config
+.bolt/

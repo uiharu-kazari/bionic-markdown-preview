@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Menu, X, Globe, MessageSquare, Heart, ExternalLink, Check } from 'lucide-react';
+import { Menu, X, Globe, Github, Heart, ExternalLink, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language, languageNames, languageCodes } from '../i18n/translations';
 
 const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
 const KOFI_URL = 'https://ko-fi.com/illyasviel1120';
-const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe7mHo47nveeSDXLTPIba4BBI_qcIORTk4ObJMY-Slf8xrrOQ/viewform?usp=dialog';
+const GITHUB_URL = 'https://github.com/uiharu-kazari/bionic-markdown-preview';
 
 export function MoreMenu() {
   const { t, language, setLanguage } = useLanguage();
@@ -170,10 +170,10 @@ export function MoreMenu() {
 
           <div className="h-px bg-slate-200 dark:bg-slate-700 mx-2" />
 
-          {/* Feedback */}
+          {/* GitHub */}
           <div className="p-1">
             <a
-              href={FEEDBACK_URL}
+              href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => closeMenu()}
@@ -181,8 +181,8 @@ export function MoreMenu() {
               style={{ animation: 'itemFadeIn 0.2s ease-out 0.1s both' }}
             >
               <div className="flex items-center gap-3">
-                <MessageSquare className="w-4 h-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
-                <span>{t.feedback}</span>
+                <Github className="w-4 h-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
+                <span>{t.github}</span>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
             </a>
