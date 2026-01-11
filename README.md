@@ -2,6 +2,16 @@
 
 A Markdown editor with bold highlighting for faster, more focused reading.
 
+**Live at [bionicmarkdown.com](https://bionicmarkdown.com)**
+
+## Also Available On
+
+| Platform | Link |
+|----------|------|
+| **Web App** | You are here! |
+| **VS Code** | [Marketplace](https://marketplace.visualstudio.com/items?itemName=BionicMarkdown.bionic-markdown-preview) |
+| **Chrome** | [Chrome Web Store](https://github.com/uiharu-kazari/chrome-bionic-preview) (coming soon) |
+
 ## Features
 
 - **Bold Highlighting** - Emphasizes initial letters of words to guide eyes through text faster
