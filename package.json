@@ -2,7 +2,7 @@
   "name": "bionic-markdown",
   "private": true,
   "version": "1.0.0",
-  "description": "A Markdown editor with Bionic Reading support for faster, more focused reading",
+  "description": "A productivity tool for previewing Markdown with bold text highlighting for faster, more focused reading",
   "type": "module",
   "scripts": {
     "dev": "vite",

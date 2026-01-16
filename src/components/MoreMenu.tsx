@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Menu, X, Globe, Github, Heart, ExternalLink, Check } from 'lucide-react';
+import { Menu, X, Globe, Github, Heart, ExternalLink, Check, Code, Chrome } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language, languageNames, languageCodes } from '../i18n/translations';
 
 const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
 const KOFI_URL = 'https://ko-fi.com/illyasviel1120';
 const GITHUB_URL = 'https://github.com/uiharu-kazari/bionic-markdown-preview';
+const VSCODE_URL = 'https://marketplace.visualstudio.com/items?itemName=BionicMarkdown.bionic-markdown-preview';
+const CHROME_URL = 'https://github.com/uiharu-kazari/chrome-bionic-preview';
 
 export function MoreMenu() {
   const { t, language, setLanguage } = useLanguage();
@@ -185,6 +187,46 @@ export function MoreMenu() {
                 <span>{t.github}</span>
               </div>
               <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+            </a>
+          </div>
+
+          {/* VS Code Extension */}
+          <div className="p-1">
+            <a
+              href={VSCODE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => closeMenu()}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+              style={{ animation: 'itemFadeIn 0.2s ease-out 0.12s both' }}
+            >
+              <div className="flex items-center gap-3">
+                <Code className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {t.vscodeExtension}
+                </span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+            </a>
+          </div>
+
+          {/* Chrome Extension */}
+          <div className="p-1">
+            <a
+              href={CHROME_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => closeMenu()}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+              style={{ animation: 'itemFadeIn 0.2s ease-out 0.14s both' }}
+            >
+              <div className="flex items-center gap-3">
+                <Chrome className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  {t.chromeExtension}
+                </span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
             </a>
           </div>
 

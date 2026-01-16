@@ -1,4 +1,4 @@
-import { X, ALargeSmall, AlignJustify, Globe, MessageSquare, Heart, ExternalLink } from 'lucide-react';
+import { X, ALargeSmall, AlignJustify, Globe, Github, Code, Chrome, Heart, ExternalLink } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
 import { GRADIENT_THEME_LIST } from '../utils/colorUtils';
@@ -6,7 +6,9 @@ import { Slider } from './Slider';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language, languageNames } from '../i18n/translations';
 
-const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe7mHo47nveeSDXLTPIba4BBI_qcIORTk4ObJMY-Slf8xrrOQ/viewform?usp=dialog';
+const GITHUB_URL = 'https://github.com/uiharu-kazari/bionic-markdown-preview';
+const VSCODE_URL = 'https://marketplace.visualstudio.com/items?itemName=BionicMarkdown.bionic-markdown-preview';
+const CHROME_URL = 'https://github.com/uiharu-kazari/chrome-bionic-preview';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -258,16 +260,42 @@ export function SettingsPanel({
             <hr className="border-slate-200 dark:border-slate-700 mt-4" />
 
             <a
-              href={FEEDBACK_URL}
+              href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full mt-4 flex items-center justify-between px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
             >
               <div className="flex items-center gap-3">
-                <MessageSquare className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">{t.feedback}</span>
+                <Github className="w-5 h-5 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium">{t.github}</span>
               </div>
               <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors flex-shrink-0" />
+            </a>
+
+            <a
+              href={VSCODE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mt-2 flex items-center justify-between px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Code className="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{t.vscodeExtension}</span>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+            </a>
+
+            <a
+              href={CHROME_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mt-2 flex items-center justify-between px-4 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Chrome className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-medium group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{t.chromeExtension}</span>
+              </div>
+              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors flex-shrink-0" />
             </a>
 
             <a

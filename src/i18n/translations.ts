@@ -68,6 +68,8 @@ export interface Translations {
   support: string;
   supportDescription: string;
   moreMenu: string;
+  vscodeExtension: string;
+  chromeExtension: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -139,6 +141,8 @@ export const translations: Record<Language, Translations> = {
     support: 'Support',
     supportDescription: 'Support development on Ko-fi',
     moreMenu: 'More',
+    vscodeExtension: 'VS Code Extension',
+    chromeExtension: 'Chrome Extension',
   },
 
   zh: {
@@ -209,6 +213,8 @@ export const translations: Record<Language, Translations> = {
     support: '支持',
     supportDescription: '在 Ko-fi 上支持开发',
     moreMenu: '更多',
+    vscodeExtension: 'VS Code 扩展',
+    chromeExtension: 'Chrome 扩展',
   },
 
   fr: {
@@ -279,6 +285,8 @@ export const translations: Record<Language, Translations> = {
     support: 'Soutenir',
     supportDescription: 'Soutenez le développement sur Ko-fi',
     moreMenu: 'Plus',
+    vscodeExtension: 'Extension VS Code',
+    chromeExtension: 'Extension Chrome',
   },
 
   ja: {
@@ -349,6 +357,8 @@ export const translations: Record<Language, Translations> = {
     support: 'サポート',
     supportDescription: 'Ko-fiで開発をサポート',
     moreMenu: 'その他',
+    vscodeExtension: 'VS Code 拡張機能',
+    chromeExtension: 'Chrome 拡張機能',
   },
 };
 
