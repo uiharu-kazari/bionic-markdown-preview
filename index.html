@@ -88,8 +88,8 @@
     </script>
   </head>
   <body>
-    <!-- Static content for crawlers -->
-    <noscript>
+    <!-- Static content for crawlers (visually hidden, always in DOM) -->
+    <div id="crawler-content" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
       <header>
         <h1>Bionic Markdown Preview</h1>
         <p><strong>A Free Productivity Tool for Developers and Writers</strong></p>
@@ -130,7 +130,7 @@
           <p>Category: Productivity / Developer Tools / Accessibility</p>
         </footer>
       </main>
-    </noscript>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
