@@ -10,7 +10,7 @@ A Markdown editor with bold highlighting for faster, more focused reading.
 |----------|------|
 | **Web App** | You are here! |
 | **VS Code** | [Marketplace](https://marketplace.visualstudio.com/items?itemName=BionicMarkdown.bionic-markdown-preview) |
-| **Chrome** | [Chrome Web Store](https://github.com/uiharu-kazari/chrome-bionic-preview) (coming soon) |
+| **Chrome** | [GitHub](https://github.com/uiharu-kazari/chrome-bionic-preview) |
 
 ## Features
 
