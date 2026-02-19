@@ -6,7 +6,7 @@ import {
   Preview,
   ResizablePanels,
 } from './components';
-import { useLocalStorage } from './hooks/useLocalStorage';
+import { useSessionStorage } from './hooks/useSessionStorage';
 import { loadGoogleFont, ALL_FONTS } from './utils/fonts';
 import { useLanguage } from './contexts/LanguageContext';
 import { defaultMarkdown } from './i18n/translations';
@@ -44,10 +44,10 @@ function isDefaultContent(content: string): boolean {
 
 function App() {
   const { language } = useLanguage();
-  const [markdown, setMarkdown] = useLocalStorage('enhanced-md-content', defaultMarkdown.en);
-  const [bionicOptions, setBionicOptions] = useLocalStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS);
-  const [gradientOptions, setGradientOptions] = useLocalStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS);
-  const [editorSettings, setEditorSettings] = useLocalStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS);
+  const [markdown, setMarkdown] = useSessionStorage('enhanced-md-content', defaultMarkdown.en);
+  const [bionicOptions, setBionicOptions] = useSessionStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS);
+  const [gradientOptions, setGradientOptions] = useSessionStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS);
+  const [editorSettings, setEditorSettings] = useSessionStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewOnly, setPreviewOnly] = useState(false);
   const prevLanguageRef = useRef(language);
