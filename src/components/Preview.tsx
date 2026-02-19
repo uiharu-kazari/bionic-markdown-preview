@@ -314,12 +314,15 @@ ${processedHtml}
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
         }
-        [data-source-line], [${SOURCE_CHAR_START_ATTR}] {
+        [data-source-line]:not(pre), [${SOURCE_CHAR_START_ATTR}]:not(pre) {
           cursor: pointer;
           transition: background-color 0.15s;
         }
-        [data-source-line]:hover, [${SOURCE_CHAR_START_ATTR}]:hover {
+        [data-source-line]:not(pre):hover, [${SOURCE_CHAR_START_ATTR}]:not(pre):hover {
           background-color: rgba(148, 163, 184, 0.1);
+        }
+        pre[data-source-line], pre[data-source-line] * {
+          cursor: text;
         }
       `}</style>
       <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
