@@ -2,9 +2,8 @@ import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { Copy, Download, Eye, EyeOff } from 'lucide-react';
 import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
-import { 
-  getCharacterPositionFromClick, 
-  getSelectionSourceRange,
+import {
+  getCharacterPositionFromClick,
   SOURCE_CHAR_START_ATTR,
   insertCursorAtPosition,
   removeCursor,
@@ -56,7 +55,6 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     navigateToEditorChar,
     previewHighlight,
     editorCursorPosition,
-    setEditorSelection,
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -140,13 +138,8 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     // Check if there's a selection
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed && selection.toString().length > 0) {
-      // User made a selection - sync to editor
-      const selectionRange = getSelectionSourceRange(articleRef.current);
-      if (selectionRange && selectionRange.sourceStart !== selectionRange.sourceEnd) {
-        setEditorSelection(selectionRange.sourceStart, selectionRange.sourceEnd);
-        // Clear the preview selection after syncing (it's now shown in the editor)
-        selection.removeAllRanges();
-      }
+      // User made a selection - keep it visible in the preview, don't scroll/focus editor
+      return;
     } else {
       // Simple click - navigate to cursor position
       const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
@@ -154,7 +147,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
         navigateToEditorChar(charPos.sourceStart);
       }
     }
-  }, [navigateToEditorChar, setEditorSelection]);
+  }, [navigateToEditorChar]);
 
   // Apply character-level selection highlighting
   useEffect(() => {
