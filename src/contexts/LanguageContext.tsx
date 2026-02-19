@@ -13,7 +13,7 @@ const STORAGE_KEY = 'bionic-markdown-language';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored && ['en', 'zh', 'fr', 'ja'].includes(stored)) {
       return stored as Language;
     }
@@ -22,7 +22,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem(STORAGE_KEY, lang);
+    sessionStorage.setItem(STORAGE_KEY, lang);
   };
 
   useEffect(() => {
