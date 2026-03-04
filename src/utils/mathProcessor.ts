@@ -29,8 +29,8 @@ export function extractMath(text: string): ExtractResult {
   // Protect code blocks and inline code from math extraction
   const codeProtections: Array<{ placeholder: string; original: string }> = [];
 
-  // Fenced code blocks
-  processed = processed.replace(/```[\s\S]*?```/g, (match) => {
+  // Fenced code blocks (backtick and tilde)
+  processed = processed.replace(/(?:```|~~~)[\s\S]*?(?:```|~~~)/g, (match) => {
     const placeholder = `\x00CODEPROTECT${codeProtections.length}\x00`;
     codeProtections.push({ placeholder, original: match });
     return placeholder;
@@ -50,16 +50,16 @@ export function extractMath(text: string): ExtractResult {
     return id;
   });
 
-  // Inline math: $...$ (no newlines, no leading/trailing spaces)
-  processed = processed.replace(/(?<![\\$])\$(?!\s)([^\$\n]+?)(?<!\s)\$(?!\$)/g, (_match, math) => {
+  // Inline math: $...$ (no newlines, no leading/trailing spaces, must contain a letter)
+  processed = processed.replace(/(?<![\\$])\$(?!\s)([^\$\n]*[a-zA-Z\\][^\$\n]*?)(?<!\s)\$(?!\$)/g, (_match, math) => {
     const id = `MATHBLOCK${mathBlocks.length}ENDMATH`;
     mathBlocks.push({ id, math: math.trim(), display: false });
     return id;
   });
 
-  // Restore code blocks
+  // Restore code blocks (use function replacement to avoid $ special patterns)
   for (const { placeholder, original } of codeProtections) {
-    processed = processed.replace(placeholder, original);
+    processed = processed.replace(placeholder, () => original);
   }
 
   return { processed, mathBlocks };
@@ -86,11 +86,11 @@ export function restoreMath(html: string, mathBlocks: MathBlock[]): string {
     if (block.display) {
       result = result.replace(
         new RegExp(`<p>${block.id}</p>`),
-        wrapper
+        () => wrapper
       );
     }
     // Fallback: replace the placeholder directly
-    result = result.replace(block.id, wrapper);
+    result = result.replace(block.id, () => wrapper);
   }
 
   return result;
