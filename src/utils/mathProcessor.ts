@@ -62,7 +62,7 @@ export function extractMath(text: string): ExtractResult {
   processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => addMath(math, false));
 
   // Inline math: $...$ (no newlines, no leading/trailing spaces, must contain a letter)
-  processed = processed.replace(/(?<![\\$])\$(?!\s)([^\$\n]*[a-zA-Z\\][^\$\n]*?)(?<!\s)\$(?!\$)/g, (_, math) => addMath(math, false));
+  processed = processed.replace(/(?<![\\$])\$(?!\s)([^$\n]*[a-zA-Z\\][^$\n]*?)(?<!\s)\$(?!\$)/g, (_, math) => addMath(math, false));
 
   // Restore code blocks (use function replacement to avoid $ special patterns)
   for (const { placeholder, original } of codeProtections) {
