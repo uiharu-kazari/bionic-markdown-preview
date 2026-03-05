@@ -43,19 +43,26 @@ export function extractMath(text: string): ExtractResult {
     return placeholder;
   });
 
-  // Display math: $$...$$ (must come before inline math)
-  processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (_match, math) => {
+  const addMath = (math: string, display: boolean): string => {
     const id = `MATHBLOCK${mathBlocks.length}ENDMATH`;
-    mathBlocks.push({ id, math: math.trim(), display: true });
+    mathBlocks.push({ id, math: math.trim(), display });
     return id;
-  });
+  };
+
+  // Display math: \[...\]
+  processed = processed.replace(/\\\[([\s\S]+?)\\\]/g, (_, math) => addMath(math, true));
+
+  // Display math: \begin{...}...\end{...}
+  processed = processed.replace(/\\begin\{([^}]+)\}([\s\S]*?)\\end\{\1\}/g, (match) => addMath(match, true));
+
+  // Display math: $$...$$ (must come before inline math)
+  processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (_, math) => addMath(math, true));
+
+  // Inline math: \(...\)
+  processed = processed.replace(/\\\(([\s\S]+?)\\\)/g, (_, math) => addMath(math, false));
 
   // Inline math: $...$ (no newlines, no leading/trailing spaces, must contain a letter)
-  processed = processed.replace(/(?<![\\$])\$(?!\s)([^\$\n]*[a-zA-Z\\][^\$\n]*?)(?<!\s)\$(?!\$)/g, (_match, math) => {
-    const id = `MATHBLOCK${mathBlocks.length}ENDMATH`;
-    mathBlocks.push({ id, math: math.trim(), display: false });
-    return id;
-  });
+  processed = processed.replace(/(?<![\\$])\$(?!\s)([^\$\n]*[a-zA-Z\\][^\$\n]*?)(?<!\s)\$(?!\$)/g, (_, math) => addMath(math, false));
 
   // Restore code blocks (use function replacement to avoid $ special patterns)
   for (const { placeholder, original } of codeProtections) {
@@ -76,6 +83,15 @@ export function restoreMath(html: string, mathBlocks: MathBlock[]): string {
       displayMode: block.display,
       throwOnError: false,
       output: 'html',
+      trust: true,
+      strict: false,
+      macros: {
+        '\\R': '\\mathbb{R}',
+        '\\N': '\\mathbb{N}',
+        '\\Z': '\\mathbb{Z}',
+        '\\Q': '\\mathbb{Q}',
+        '\\C': '\\mathbb{C}',
+      },
     });
 
     const wrapper = block.display
