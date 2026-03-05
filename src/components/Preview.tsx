@@ -60,9 +60,10 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
 
   // Memoize HTML processing without dimOpacity - opacity is applied via CSS variable
   const processedHtml = useMemo(() => {
-    const { dimOpacity: _, ...bionicOptionsWithoutOpacity } = bionicOptions;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { dimOpacity, ...bionicOptionsWithoutOpacity } = bionicOptions;
     return processMarkdownToBionic(markdown, bionicOptionsWithoutOpacity);
-  }, [markdown, bionicOptions.enabled, bionicOptions.fixationPoint, bionicOptions.highlightTag, bionicOptions.highlightClass]);
+  }, [markdown, bionicOptions]);
 
   const debouncedHtml = useDebounce(processedHtml, 150);
   
@@ -174,27 +175,23 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
   // Only shows inline cursor when position maps precisely to text content
   // Empty lines and block boundaries simply don't show a cursor (architectural limitation)
   useEffect(() => {
-    if (!articleRef.current) return;
+    const article = articleRef.current;
+    if (!article) return;
 
     // Remove existing cursor
-    removeCursor(articleRef.current);
+    removeCursor(article);
 
     // Insert cursor only if we have a position and no selection highlight
     if (editorCursorPosition !== null && !previewHighlight) {
       requestAnimationFrame(() => {
         if (articleRef.current) {
-          // Try to insert inline cursor - if position doesn't map to text,
-          // cursor simply won't appear (this is acceptable for empty lines)
           insertCursorAtPosition(articleRef.current, editorCursorPosition);
         }
       });
     }
-    
-    // Cleanup
+
     return () => {
-      if (articleRef.current) {
-        removeCursor(articleRef.current);
-      }
+      removeCursor(article);
     };
   }, [editorCursorPosition, previewHighlight, processedHtml]);
 

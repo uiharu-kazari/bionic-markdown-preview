@@ -93,7 +93,7 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
     
     if (state && token.content) {
       // Find position of this text in source
-      const pos = findTextInSource(state, token.content, tokens, idx);
+      const pos = findTextInSource(state, token.content);
       if (pos) {
         const escaped = md.utils.escapeHtml(token.content);
         // Store the actual source text for precise character mapping
@@ -161,7 +161,7 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
   }
 
   // Code block with character positions
-  md.renderer.rules.code_block = (tokens, idx, _options, env, _self) => {
+  md.renderer.rules.code_block = (tokens, idx, _options, env) => {
     const token = tokens[idx];
     const state = (env as { __sourceMapping?: RenderState }).__sourceMapping;
     const content = md.utils.escapeHtml(token.content);
@@ -182,7 +182,7 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
   };
 
   // Fenced code block
-  md.renderer.rules.fence = (tokens, idx, _options, env, _self) => {
+  md.renderer.rules.fence = (tokens, idx, _options, env) => {
     const token = tokens[idx];
     const state = (env as { __sourceMapping?: RenderState }).__sourceMapping;
     const content = md.utils.escapeHtml(token.content);
@@ -204,7 +204,7 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
   };
 
   // Horizontal rule
-  md.renderer.rules.hr = (tokens, idx, _options, env, _self) => {
+  md.renderer.rules.hr = (tokens, idx, _options, env) => {
     const token = tokens[idx];
     const state = (env as { __sourceMapping?: RenderState }).__sourceMapping;
     
@@ -234,8 +234,6 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
 function findTextInSource(
   state: RenderState,
   text: string,
-  _tokens: Token[],
-  _currentIdx: number
 ): { start: number; end: number } | null {
   // Search from the current position (to handle repeated text correctly)
   const searchStart = state.searchPosition;
