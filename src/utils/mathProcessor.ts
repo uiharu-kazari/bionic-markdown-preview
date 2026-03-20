@@ -44,7 +44,7 @@ export function extractMath(text: string): ExtractResult {
   });
 
   const addMath = (math: string, display: boolean): string => {
-    const id = `MATHBLOCK${mathBlocks.length}ENDMATH`;
+    const id = `@MATHBLOCK${mathBlocks.length}ENDMATH@`;
     mathBlocks.push({ id, math: math.trim(), display });
     return id;
   };
