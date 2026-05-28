@@ -158,7 +158,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     } else {
       // Simple click - navigate to cursor position
       const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
-      if (charPos) {
+      if (charPos !== null && charPos !== undefined) {
         navigateToEditorChar(charPos.sourceStart);
       }
     }
