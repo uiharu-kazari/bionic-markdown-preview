@@ -34,4 +34,5 @@ export interface EditorSettings {
   theme: 'light' | 'dark';
   previewFontFamily: string;
   layout: LayoutDirection;
+  panelsSwapped: boolean;
 }
