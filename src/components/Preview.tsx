@@ -60,9 +60,10 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
 
   // Memoize HTML processing without dimOpacity - opacity is applied via CSS variable
   const processedHtml = useMemo(() => {
-    const { dimOpacity: _, ...bionicOptionsWithoutOpacity } = bionicOptions;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { dimOpacity, ...bionicOptionsWithoutOpacity } = bionicOptions;
     return processMarkdownToBionic(markdown, bionicOptionsWithoutOpacity);
-  }, [markdown, bionicOptions.enabled, bionicOptions.fixationPoint, bionicOptions.highlightTag, bionicOptions.highlightClass]);
+  }, [markdown, bionicOptions]);
 
   const debouncedHtml = useDebounce(processedHtml, 150);
   
@@ -124,26 +125,40 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
+  // Track whether there was a selection before mousedown
+  // When clicking on selected text, the browser clears the selection on mousedown,
+  // so by mouseup the selection appears collapsed — we need to suppress navigation in that case.
+  const hadSelectionOnMouseDown = useRef(false);
+
+  const handlePreviewMouseDown = useCallback(() => {
+    const selection = window.getSelection();
+    hadSelectionOnMouseDown.current = !!(selection && !selection.isCollapsed && selection.toString().length > 0);
+  }, []);
+
   // Handle mouse interactions on preview
-  // - Click (no selection) → navigate to cursor position in editor  
+  // - Click (no selection) → navigate to cursor position in editor
   // - Selection (mousedown + drag + mouseup) → sync selection to editor
   const handlePreviewMouseUp = useCallback((e: React.MouseEvent) => {
     if (!articleRef.current) return;
-    
+
     const target = e.target as Element;
-    
+
     // Don't handle clicks on links
     if (target.tagName === 'A' || target.closest('a')) return;
-    
+
     // Check if there's a selection
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed && selection.toString().length > 0) {
       // User made a selection - keep it visible in the preview, don't scroll/focus editor
       return;
+    } else if (hadSelectionOnMouseDown.current) {
+      // User clicked on previously selected text, clearing the selection
+      // Don't navigate — they just wanted to deselect
+      return;
     } else {
       // Simple click - navigate to cursor position
       const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
-      if (charPos) {
+      if (charPos !== null && charPos !== undefined) {
         navigateToEditorChar(charPos.sourceStart);
       }
     }
@@ -174,27 +189,23 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
   // Only shows inline cursor when position maps precisely to text content
   // Empty lines and block boundaries simply don't show a cursor (architectural limitation)
   useEffect(() => {
-    if (!articleRef.current) return;
+    const article = articleRef.current;
+    if (!article) return;
 
     // Remove existing cursor
-    removeCursor(articleRef.current);
+    removeCursor(article);
 
     // Insert cursor only if we have a position and no selection highlight
     if (editorCursorPosition !== null && !previewHighlight) {
       requestAnimationFrame(() => {
         if (articleRef.current) {
-          // Try to insert inline cursor - if position doesn't map to text,
-          // cursor simply won't appear (this is acceptable for empty lines)
           insertCursorAtPosition(articleRef.current, editorCursorPosition);
         }
       });
     }
-    
-    // Cleanup
+
     return () => {
-      if (articleRef.current) {
-        removeCursor(articleRef.current);
-      }
+      removeCursor(article);
     };
   }, [editorCursorPosition, previewHighlight, processedHtml]);
 
@@ -349,6 +360,7 @@ ${processedHtml}
       >
         <article
           ref={articleRef}
+          onMouseDown={handlePreviewMouseDown}
           onMouseUp={handlePreviewMouseUp}
           className="prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
           style={{

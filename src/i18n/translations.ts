@@ -62,6 +62,7 @@ export interface Translations {
 
   layoutHorizontal: string;
   layoutVertical: string;
+  swapPanels: string;
   previewOnly: string;
   exitPreviewOnly: string;
   github: string;
@@ -135,6 +136,7 @@ export const translations: Record<Language, Translations> = {
 
     layoutHorizontal: 'Horizontal layout',
     layoutVertical: 'Vertical layout',
+    swapPanels: 'Swap panels',
     previewOnly: 'Preview only',
     exitPreviewOnly: 'Exit preview only',
     github: 'GitHub',
@@ -207,6 +209,7 @@ export const translations: Record<Language, Translations> = {
 
     layoutHorizontal: '水平布局',
     layoutVertical: '垂直布局',
+    swapPanels: '交换面板',
     previewOnly: '仅预览',
     exitPreviewOnly: '退出仅预览',
     github: 'GitHub',
@@ -279,6 +282,7 @@ export const translations: Record<Language, Translations> = {
 
     layoutHorizontal: 'Disposition horizontale',
     layoutVertical: 'Disposition verticale',
+    swapPanels: 'Inverser les panneaux',
     previewOnly: 'Apercu seul',
     exitPreviewOnly: 'Quitter apercu seul',
     github: 'GitHub',
@@ -351,6 +355,7 @@ export const translations: Record<Language, Translations> = {
 
     layoutHorizontal: '横並びレイアウト',
     layoutVertical: '縦並びレイアウト',
+    swapPanels: 'パネルを入れ替え',
     previewOnly: 'プレビューのみ',
     exitPreviewOnly: 'プレビューのみを終了',
     github: 'GitHub',
