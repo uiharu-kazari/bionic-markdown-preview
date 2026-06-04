@@ -24,3 +24,6 @@ dist-ssr
 
 # MCP screenshots
 .playwright-mcp/
+
+# Bolt config
+.bolt/

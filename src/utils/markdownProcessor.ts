@@ -1,24 +1,20 @@
 import DOMPurify from 'dompurify';
 import { textVide } from 'text-vide';
 import type { BionicOptions } from '../types';
-import {
-  createMarkdownItWithSourceMap,
-  SOURCE_LINE_ATTR,
+import { 
+  createMarkdownItWithSourceMap, 
+  SOURCE_LINE_ATTR, 
   SOURCE_LINE_END_ATTR,
   SOURCE_CHAR_START_ATTR,
   SOURCE_CHAR_END_ATTR,
   SOURCE_TEXT_ATTR,
 } from './sourceMapping';
-import { extractMath, restoreMath } from './mathProcessor';
 
 const md = createMarkdownItWithSourceMap();
 
 export function renderMarkdown(content: string): string {
-  // Extract math expressions before markdown parsing
-  const { processed, mathBlocks } = extractMath(content);
-
-  const rawHtml = md.render(processed);
-  const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
+  const rawHtml = md.render(content);
+  return DOMPurify.sanitize(rawHtml, {
     ALLOWED_TAGS: [
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
       'p', 'br', 'hr',
@@ -35,9 +31,6 @@ export function renderMarkdown(content: string): string {
       SOURCE_CHAR_START_ATTR, SOURCE_CHAR_END_ATTR, SOURCE_TEXT_ATTR,
     ],
   });
-
-  // Restore math expressions with KaTeX-rendered HTML
-  return restoreMath(sanitizedHtml, mathBlocks);
 }
 
 export function applyBionicReading(
@@ -52,7 +45,6 @@ export function applyBionicReading(
   const doc = parser.parseFromString(html, 'text/html');
 
   const skipTags = new Set(['CODE', 'PRE', 'A', 'SCRIPT', 'STYLE']);
-  const skipClasses = ['katex', 'math-inline', 'math-display'];
   const highlightTag = options.highlightTag.toUpperCase();
 
   function processNode(node: Node): void {
@@ -91,8 +83,7 @@ export function applyBionicReading(
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
-      if (!skipTags.has(element.tagName) &&
-          !skipClasses.some(cls => element.classList.contains(cls))) {
+      if (!skipTags.has(element.tagName)) {
         Array.from(node.childNodes).forEach(processNode);
       }
     }
