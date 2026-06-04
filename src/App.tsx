@@ -9,7 +9,7 @@ import {
 import { useSessionStorage } from './hooks/useSessionStorage';
 import { loadGoogleFont, ALL_FONTS } from './utils/fonts';
 import { useLanguage } from './contexts/LanguageContext';
-import { defaultMarkdown } from './i18n/translations';
+import { defaultMarkdown, detectLanguage } from './i18n/translations';
 import type { BionicOptions, EditorSettings, GradientOptions } from './types';
 
 const DEFAULT_BIONIC_OPTIONS: BionicOptions = {
@@ -33,6 +33,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   theme: 'light',
   previewFontFamily: '"Inter", sans-serif',
   layout: 'horizontal',
+  panelsSwapped: false,
 };
 
 // Check if content matches any language's default
@@ -44,7 +45,7 @@ function isDefaultContent(content: string): boolean {
 
 function App() {
   const { language } = useLanguage();
-  const [markdown, setMarkdown] = useSessionStorage('enhanced-md-content', defaultMarkdown.en);
+  const [markdown, setMarkdown] = useSessionStorage('enhanced-md-content', defaultMarkdown[detectLanguage()]);
   const [bionicOptions, setBionicOptions] = useSessionStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS);
   const [gradientOptions, setGradientOptions] = useSessionStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS);
   const [editorSettings, setEditorSettings] = useSessionStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS);
@@ -117,6 +118,13 @@ function App() {
     }));
   }, [setEditorSettings]);
 
+  const handleSwapPanels = useCallback(() => {
+    setEditorSettings((prev) => ({
+      ...prev,
+      panelsSwapped: !prev.panelsSwapped,
+    }));
+  }, [setEditorSettings]);
+
   const handlePreviewOnlyToggle = useCallback(() => {
     setPreviewOnly((prev) => !prev);
   }, []);
@@ -135,6 +143,7 @@ function App() {
         onSettingsToggle={() => setSettingsOpen(true)}
         onThemeToggle={handleThemeToggle}
         onLayoutToggle={handleLayoutToggle}
+        onSwapPanels={handleSwapPanels}
         onPreviewOnlyToggle={handlePreviewOnlyToggle}
       />
 
@@ -150,20 +159,38 @@ function App() {
         ) : (
           <ResizablePanels
             leftPanel={
-              <MarkdownEditor
-                value={markdown}
-                onChange={setMarkdown}
-                settings={editorSettings}
-              />
+              editorSettings.panelsSwapped ? (
+                <Preview
+                  markdown={markdown}
+                  bionicOptions={bionicOptions}
+                  gradientOptions={gradientOptions}
+                  settings={editorSettings}
+                  onBionicToggle={handleBionicToggle}
+                />
+              ) : (
+                <MarkdownEditor
+                  value={markdown}
+                  onChange={setMarkdown}
+                  settings={editorSettings}
+                />
+              )
             }
             rightPanel={
-              <Preview
-                markdown={markdown}
-                bionicOptions={bionicOptions}
-                gradientOptions={gradientOptions}
-                settings={editorSettings}
-                onBionicToggle={handleBionicToggle}
-              />
+              editorSettings.panelsSwapped ? (
+                <MarkdownEditor
+                  value={markdown}
+                  onChange={setMarkdown}
+                  settings={editorSettings}
+                />
+              ) : (
+                <Preview
+                  markdown={markdown}
+                  bionicOptions={bionicOptions}
+                  gradientOptions={gradientOptions}
+                  settings={editorSettings}
+                  onBionicToggle={handleBionicToggle}
+                />
+              )
             }
             defaultSize={50}
             minSize={25}
