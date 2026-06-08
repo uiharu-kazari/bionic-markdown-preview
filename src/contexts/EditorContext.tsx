@@ -66,6 +66,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   // the preview panel as the editor smooth-scrolls to the clicked position.
   const suppressEditorSyncRef = useRef(false);
   const suppressTimeoutRef = useRef<number | null>(null);
+  // Identifies the latest navigation so a superseded navigation's settle
+  // handler (rapid back-to-back clicks) can no-op instead of clearing the
+  // newer navigation's suppression early.
+  const navTokenRef = useRef(0);
   
   // Highlight state for both panels (character-based)
   const [editorHighlight, setEditorHighlight] = useState<CharacterHighlight | null>(null);
@@ -215,7 +219,10 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // Suppress editor → preview scroll sync until this navigation scroll
     // settles, so the preview panel doesn't jump when text is clicked in it.
     suppressEditorSyncRef.current = true;
+    const myToken = ++navTokenRef.current;
     const clearSuppress = () => {
+      // A newer navigation has taken over; leave its state untouched.
+      if (navTokenRef.current !== myToken) return;
       suppressEditorSyncRef.current = false;
       textarea.removeEventListener('scrollend', clearSuppress);
       if (suppressTimeoutRef.current) {
