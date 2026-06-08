@@ -61,6 +61,15 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const lineHeightsRef = useRef<number[]>([]);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<number | null>(null);
+  // Suppresses editor → preview scroll sync while a click-driven editor
+  // navigation is animating, so clicking text in the preview doesn't bounce
+  // the preview panel as the editor smooth-scrolls to the clicked position.
+  const suppressEditorSyncRef = useRef(false);
+  const suppressTimeoutRef = useRef<number | null>(null);
+  // Identifies the latest navigation so a superseded navigation's settle
+  // handler (rapid back-to-back clicks) can no-op instead of clearing the
+  // newer navigation's suppression early.
+  const navTokenRef = useRef(0);
   
   // Highlight state for both panels (character-based)
   const [editorHighlight, setEditorHighlight] = useState<CharacterHighlight | null>(null);
@@ -107,7 +116,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
   // Content-based scroll sync: sync by finding which content is at viewport top
   const syncScrollFromEditor = useCallback(() => {
-    if (!scrollSyncEnabled || isScrollingRef.current) return;
+    if (!scrollSyncEnabled || isScrollingRef.current || suppressEditorSyncRef.current) return;
     
     const textarea = editorTextareaRef.current;
     const article = previewArticleRef.current;
@@ -203,9 +212,29 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     const line = getLineFromPosition(text, clampedPos);
     
     // Calculate scroll position
-    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) ||
                        parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
     const scrollTop = (line - 1) * lineHeight - textarea.clientHeight / 3;
+
+    // Suppress editor → preview scroll sync until this navigation scroll
+    // settles, so the preview panel doesn't jump when text is clicked in it.
+    suppressEditorSyncRef.current = true;
+    const myToken = ++navTokenRef.current;
+    const clearSuppress = () => {
+      // A newer navigation has taken over; leave its state untouched.
+      if (navTokenRef.current !== myToken) return;
+      suppressEditorSyncRef.current = false;
+      textarea.removeEventListener('scrollend', clearSuppress);
+      if (suppressTimeoutRef.current) {
+        clearTimeout(suppressTimeoutRef.current);
+        suppressTimeoutRef.current = null;
+      }
+    };
+    textarea.addEventListener('scrollend', clearSuppress, { once: true });
+    // Fallback for browsers without 'scrollend' (e.g. older Safari) or when
+    // the target position requires no scroll, so the flag can't get stuck.
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    suppressTimeoutRef.current = window.setTimeout(clearSuppress, 700);
 
     textarea.scrollTo({
       top: Math.max(0, scrollTop),
@@ -213,7 +242,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     });
 
     // Focus and set cursor position at exact character
-    textarea.focus();
+    textarea.focus({ preventScroll: true });
     textarea.setSelectionRange(clampedPos, clampedPos);
 
     // Find the line boundaries for highlighting
@@ -293,6 +322,9 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     return () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
+      }
+      if (suppressTimeoutRef.current) {
+        clearTimeout(suppressTimeoutRef.current);
       }
     };
   }, []);
