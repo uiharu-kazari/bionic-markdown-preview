@@ -11,6 +11,11 @@ import {
   removeSelectionHighlight,
   SELECTION_HIGHLIGHT_CLASS,
 } from '../utils/sourceMapping';
+import {
+  createSentenceHoverController,
+  SENTENCE_HOVER_HIGHLIGHT,
+  type SentenceHoverController,
+} from '../utils/sentenceHover';
 import { useEditorContext } from '../contexts/EditorContext';
 import { useDebounce } from '../hooks/useDebounce';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
@@ -125,20 +130,18 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
-  // Track whether there was a selection before mousedown
-  // When clicking on selected text, the browser clears the selection on mousedown,
-  // so by mouseup the selection appears collapsed — we need to suppress navigation in that case.
-  const hadSelectionOnMouseDown = useRef(false);
-
-  const handlePreviewMouseDown = useCallback(() => {
-    const selection = window.getSelection();
-    hadSelectionOnMouseDown.current = !!(selection && !selection.isCollapsed && selection.toString().length > 0);
+  // Prevent the browser from initiating a text selection on drag. select-none
+  // alone isn't enough: Chromium anchors a drag-selection started on
+  // non-selectable content at the nearest selectable text, which phantom-selects
+  // toolbar labels when dragging across the preview.
+  const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
   }, []);
 
-  // Handle mouse interactions on preview
-  // - Click (no selection) → navigate to cursor position in editor
-  // - Selection (mousedown + drag + mouseup) → sync selection to editor
-  const handlePreviewMouseUp = useCallback((e: React.MouseEvent) => {
+  // Handle click on preview → navigate to the cursor position in the editor.
+  // Text selection is disabled in the preview (select-none), so there is no
+  // selection state to consider — every click is a navigation.
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
     if (!articleRef.current) return;
 
     const target = e.target as Element;
@@ -146,23 +149,39 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     // Don't handle clicks on links
     if (target.tagName === 'A' || target.closest('a')) return;
 
-    // Check if there's a selection
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed && selection.toString().length > 0) {
-      // User made a selection - keep it visible in the preview, don't scroll/focus editor
-      return;
-    } else if (hadSelectionOnMouseDown.current) {
-      // User clicked on previously selected text, clearing the selection
-      // Don't navigate — they just wanted to deselect
-      return;
-    } else {
-      // Simple click - navigate to cursor position
-      const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
-      if (charPos !== null && charPos !== undefined) {
-        navigateToEditorChar(charPos.sourceStart);
-      }
+    const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
+    if (charPos !== null && charPos !== undefined) {
+      navigateToEditorChar(charPos.sourceStart);
     }
   }, [navigateToEditorChar]);
+
+  // Sentence-level hover highlight (CSS Custom Highlight API — no DOM mutation)
+  const sentenceHoverRef = useRef<SentenceHoverController | null>(null);
+  if (!sentenceHoverRef.current) {
+    sentenceHoverRef.current = createSentenceHoverController();
+  }
+
+  const handlePreviewMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!articleRef.current) return;
+    sentenceHoverRef.current?.schedule(
+      articleRef.current,
+      e.target as Element,
+      e.clientX,
+      e.clientY
+    );
+  }, []);
+
+  const handlePreviewMouseLeave = useCallback(() => {
+    sentenceHoverRef.current?.clear();
+  }, []);
+
+  // Drop the highlight when content re-renders or the component unmounts —
+  // the highlighted ranges would point at replaced DOM nodes.
+  useEffect(() => {
+    return () => {
+      sentenceHoverRef.current?.clear();
+    };
+  }, [debouncedHtml]);
 
   // Apply character-level selection highlighting
   useEffect(() => {
@@ -305,13 +324,12 @@ ${processedHtml}
         }
         [data-source-line]:not(pre), [${SOURCE_CHAR_START_ATTR}]:not(pre) {
           cursor: pointer;
-          transition: background-color 0.15s;
         }
-        [data-source-line]:not(pre):hover, [${SOURCE_CHAR_START_ATTR}]:not(pre):hover {
-          background-color: rgba(148, 163, 184, 0.1);
+        ::highlight(${SENTENCE_HOVER_HIGHLIGHT}) {
+          background-color: rgba(16, 185, 129, 0.16);
         }
-        pre[data-source-line], pre[data-source-line] * {
-          cursor: text;
+        .dark ::highlight(${SENTENCE_HOVER_HIGHLIGHT}) {
+          background-color: rgba(16, 185, 129, 0.28);
         }
       `}</style>
       <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
@@ -361,8 +379,10 @@ ${processedHtml}
         <article
           ref={articleRef}
           onMouseDown={handlePreviewMouseDown}
-          onMouseUp={handlePreviewMouseUp}
-          className="prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
+          onClick={handlePreviewClick}
+          onMouseMove={handlePreviewMouseMove}
+          onMouseLeave={handlePreviewMouseLeave}
+          className="select-none prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
           style={{
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.previewFontFamily,
