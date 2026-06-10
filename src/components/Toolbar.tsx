@@ -52,7 +52,7 @@ export function Toolbar({
 
   return (
     <>
-      <header className="flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
+      <header className="select-none flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
       <div className="flex items-center gap-2 min-[1440px]:gap-3 min-w-0 overflow-hidden relative z-0">
         {/* Bionic Icon - inverted colors for header */}
         <svg 
