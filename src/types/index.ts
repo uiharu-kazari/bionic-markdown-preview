@@ -6,11 +6,11 @@ export interface BionicOptions {
   dimOpacity: number;
 }
 
-export type GradientTheme = 
-  | 'none' 
-  | 'ocean' 
-  | 'sunset' 
-  | 'forest' 
+export type GradientTheme =
+  | 'none'
+  | 'ocean'
+  | 'sunset'
+  | 'forest'
   | 'berry'
   | 'lavender'
   | 'autumn'

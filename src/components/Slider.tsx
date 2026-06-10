@@ -1,15 +1,14 @@
-import { InputHTMLAttributes, useMemo } from 'react';
-
-interface SliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface SliderProps {
   min: number;
   max: number;
   value: number;
+  onChange: (value: number) => void;
+  step?: number;
+  title?: string;
 }
 
-export function Slider({ min, max, value, className = '', style, ...props }: SliderProps) {
-  const progress = useMemo(() => {
-    return ((value - min) / (max - min)) * 100;
-  }, [value, min, max]);
+export function Slider({ min, max, value, onChange, step = 1, title }: SliderProps) {
+  const percentage = ((value - min) / (max - min)) * 100;
 
   return (
     <input
@@ -17,12 +16,12 @@ export function Slider({ min, max, value, className = '', style, ...props }: Sli
       min={min}
       max={max}
       value={value}
-      className={className}
+      onChange={(e) => onChange(Number(e.target.value))}
+      step={step}
+      title={title}
       style={{
-        ...style,
-        '--slider-progress': `${progress}%`,
+        '--slider-progress': `${percentage}%`,
       } as React.CSSProperties}
-      {...props}
     />
   );
 }

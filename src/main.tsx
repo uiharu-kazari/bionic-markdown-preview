@@ -1,17 +1,16 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import { EditorProvider } from './contexts/EditorContext';
-import { LanguageProvider } from './contexts/LanguageContext';
-import 'katex/dist/katex.min.css';
-import './index.css';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+import { LanguageProvider } from './contexts/LanguageContext.tsx'
+import { EditorProvider } from './contexts/EditorContext.tsx'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
     <LanguageProvider>
       <EditorProvider>
         <App />
       </EditorProvider>
     </LanguageProvider>
-  </StrictMode>
-);
+  </React.StrictMode>,
+)
