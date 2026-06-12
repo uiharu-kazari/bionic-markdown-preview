@@ -130,24 +130,51 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
-  // Prevent the browser from initiating a text selection on drag. select-none
-  // alone isn't enough: Chromium anchors a drag-selection started on
-  // non-selectable content at the nearest selectable text, which phantom-selects
-  // toolbar labels when dragging across the preview.
+  // Where the mouse went down, to tell a click from a drag-selection at
+  // mouseup. hadSelection covers clicking selected text: the browser clears
+  // the selection on mousedown, so by click time it looks collapsed.
+  const mouseDownRef = useRef<{ x: number; y: number; hadSelection: boolean } | null>(null);
+
   const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+    const selection = window.getSelection();
+    mouseDownRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      hadSelection: !!(selection && !selection.isCollapsed && selection.toString().length > 0),
+    };
   }, []);
 
   // Handle click on preview → navigate to the cursor position in the editor.
-  // Text selection is disabled in the preview (select-none), so there is no
-  // selection state to consider — every click is a navigation.
+  // Only a true click navigates; drag-selections stay local to the preview
+  // and never touch the editor (no focus, no scroll — so no sync cascade).
   const handlePreviewClick = useCallback((e: React.MouseEvent) => {
     if (!articleRef.current) return;
+
+    const down = mouseDownRef.current;
+    mouseDownRef.current = null;
 
     const target = e.target as Element;
 
     // Don't handle clicks on links
     if (target.tagName === 'A' || target.closest('a')) return;
+
+    // Pointer travelled — a drag-selection, not a click. Stays local.
+    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) return;
+
+    // Click on selected text clears the selection — user wanted to deselect
+    if (down?.hadSelection) return;
+
+    // Double/triple click is a word/paragraph selection gesture — leave it
+    if (e.detail > 1) return;
+
+    // A couple px of wobble makes the browser select a single character;
+    // that's an accidental selection — discard it and treat as a click.
+    // (A real selection can't come from a sub-4px single click.)
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) {
+      if (selection.toString().length > 2) return;
+      selection.removeAllRanges();
+    }
 
     const charPos = getCharacterPositionFromClick(e.nativeEvent, articleRef.current);
     if (charPos !== null && charPos !== undefined) {
@@ -163,6 +190,11 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
 
   const handlePreviewMouseMove = useCallback((e: React.MouseEvent) => {
     if (!articleRef.current) return;
+    // Don't paint the hover highlight over an in-progress drag-selection
+    if (e.buttons !== 0) {
+      sentenceHoverRef.current?.clear();
+      return;
+    }
     sentenceHoverRef.current?.schedule(
       articleRef.current,
       e.target as Element,
@@ -191,8 +223,9 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     removeSelectionHighlight(articleRef.current);
 
     // Apply new character-level highlights if any
+    let rafId = 0;
     if (previewHighlight) {
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         if (articleRef.current) {
           applySelectionHighlight(
             articleRef.current,
@@ -202,6 +235,11 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
         }
       });
     }
+
+    // Cancel the pending frame if the highlight changes before it runs —
+    // otherwise a stale rAF can re-apply a highlight that was just cleared
+    // and leave it stuck (e.g. select-all in editor then blur within a frame)
+    return () => cancelAnimationFrame(rafId);
   }, [previewHighlight, processedHtml]);
 
   // Show cursor at editor cursor position
@@ -215,8 +253,9 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     removeCursor(article);
 
     // Insert cursor only if we have a position and no selection highlight
+    let rafId = 0;
     if (editorCursorPosition !== null && !previewHighlight) {
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         if (articleRef.current) {
           insertCursorAtPosition(articleRef.current, editorCursorPosition);
         }
@@ -224,6 +263,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
 
     return () => {
+      cancelAnimationFrame(rafId);
       removeCursor(article);
     };
   }, [editorCursorPosition, previewHighlight, processedHtml]);
@@ -325,6 +365,9 @@ ${processedHtml}
         [data-source-line]:not(pre), [${SOURCE_CHAR_START_ATTR}]:not(pre) {
           cursor: pointer;
         }
+        pre[data-source-line], pre[data-source-line] * {
+          cursor: text;
+        }
         ::highlight(${SENTENCE_HOVER_HIGHLIGHT}) {
           background-color: rgba(16, 185, 129, 0.16);
         }
@@ -332,7 +375,7 @@ ${processedHtml}
           background-color: rgba(16, 185, 129, 0.28);
         }
       `}</style>
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
+      <div className="select-none flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Preview
@@ -382,7 +425,7 @@ ${processedHtml}
           onClick={handlePreviewClick}
           onMouseMove={handlePreviewMouseMove}
           onMouseLeave={handlePreviewMouseLeave}
-          className="select-none prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
+          className="prose prose-slate dark:prose-invert max-w-none prose-custom-line-height prose-headings:font-bold prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 dark:prose-pre:bg-slate-950 prose-pre:text-slate-100 prose-blockquote:border-l-emerald-500 prose-blockquote:italic prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-strong:text-slate-900 dark:prose-strong:text-white relative"
           style={{
             fontSize: `${settings.fontSize}px`,
             fontFamily: settings.previewFontFamily,
