@@ -75,6 +75,31 @@ test('drag-selecting preview text stays local (no editor navigation)', async ({ 
   expect(await page.evaluate(previewScrollTop())).toBe(pv0);
 });
 
+test('drag-selecting past the viewport edge does not scroll the editor', async ({ page }) => {
+  await setMarkdown(page, PARAS.join('\n\n'));
+  const target = page.locator('article p', { hasText: 'topic 3' }).first();
+  await target.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+
+  const editorScroll = () => `document.querySelector('textarea').scrollTop`;
+  const eds0 = (await page.evaluate(editorScroll())) as number;
+
+  // Start a selection, then drag below the preview viewport so it auto-scrolls.
+  const box = (await target.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  await page.mouse.move(box.x + 10, box.y + 5);
+  await page.mouse.down();
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.move(box.x + 200, viewport.height - 8, { steps: 4 });
+    await page.waitForTimeout(120); // let auto-scroll tick
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  // preview auto-scrolled, but the editor must not have followed the drag
+  expect(await page.evaluate(editorScroll())).toBe(eds0);
+});
+
 test('swapping panels exchanges the panels and their widths', async ({ page }) => {
   await setMarkdown(page, PARAS.slice(0, 6).join('\n\n'));
 

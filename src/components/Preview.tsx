@@ -126,7 +126,14 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     }
   }, [previewScrollRef, previewArticleRef]);
 
+  // True while a mouse button is held inside the preview (a drag-selection in
+  // progress). A selection dragged past the viewport edge auto-scrolls the
+  // preview; we must not sync that scroll to the editor, or selecting/copying
+  // long passages would drag the editor along with it.
+  const isPreviewSelectingRef = useRef(false);
+
   const handleScroll = useCallback(() => {
+    if (isPreviewSelectingRef.current) return;
     syncScrollFromPreview();
   }, [syncScrollFromPreview]);
 
@@ -142,6 +149,16 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
       y: e.clientY,
       hadSelection: !!(selection && !selection.isCollapsed && selection.toString().length > 0),
     };
+    if (e.button === 0) isPreviewSelectingRef.current = true;
+  }, []);
+
+  // The drag can end anywhere, so clear the selecting flag on a global mouseup.
+  useEffect(() => {
+    const onUp = () => {
+      isPreviewSelectingRef.current = false;
+    };
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
   }, []);
 
   // Handle click on preview → navigate to the cursor position in the editor.
