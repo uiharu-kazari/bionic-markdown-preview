@@ -190,8 +190,9 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
 
   const handlePreviewMouseMove = useCallback((e: React.MouseEvent) => {
     if (!articleRef.current) return;
-    // Don't paint the hover highlight over an in-progress drag-selection
-    if (e.buttons !== 0) {
+    // Don't paint the hover highlight over an in-progress drag-selection or
+    // over the editor-selection highlight — stacked tints read as a third color
+    if (e.buttons !== 0 || previewHighlight) {
       sentenceHoverRef.current?.clear();
       return;
     }
@@ -201,7 +202,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
       e.clientX,
       e.clientY
     );
-  }, []);
+  }, [previewHighlight]);
 
   const handlePreviewMouseLeave = useCallback(() => {
     sentenceHoverRef.current?.clear();
@@ -225,6 +226,8 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     // Apply new character-level highlights if any
     let rafId = 0;
     if (previewHighlight) {
+      // Hover tint must not stack on the selection highlight (mouse may be static)
+      sentenceHoverRef.current?.clear();
       rafId = requestAnimationFrame(() => {
         if (articleRef.current) {
           applySelectionHighlight(
@@ -332,16 +335,20 @@ ${processedHtml}
         .bionic-dim {
           opacity: var(--bionic-dim-opacity, 1);
         }
+        /* Dim only the glyphs, not the whole span: element opacity also fades
+           highlight/selection backgrounds painted within the span, which made
+           overlapping highlights show different shades on bold vs dim text. */
+        @supports (color: color-mix(in srgb, red 50%, transparent)) {
+          .bionic-dim {
+            opacity: 1;
+            color: color-mix(in srgb, currentColor calc(var(--bionic-dim-opacity, 1) * 100%), transparent);
+          }
+        }
         .${SELECTION_HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.35) !important;
-          border-radius: 2px;
-          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
-          padding: 1px 0;
-          margin: -1px 0;
+          background-color: rgba(16, 185, 129, 0.3) !important;
         }
         .dark .${SELECTION_HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.45) !important;
-          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5);
+          background-color: rgba(16, 185, 129, 0.4) !important;
         }
         .preview-cursor {
           display: inline-block;

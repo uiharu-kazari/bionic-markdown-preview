@@ -196,6 +196,7 @@ function App() {
             minSize={25}
             maxSize={75}
             direction={editorSettings.layout}
+            swapped={editorSettings.panelsSwapped}
           />
         )}
       </main>

@@ -153,27 +153,46 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     
     if (!textarea || !article || !scrollContainer) return;
 
-    // For preview-to-editor sync, find which element is at the top of preview viewport
+    // For preview-to-editor sync, anchor on the content at the top of the
+    // preview viewport. Prefer the deepest element that straddles the top
+    // edge and interpolate within it — anchoring only on elements that start
+    // below the edge quantizes the sync to block boundaries, which reads as
+    // jerky/irregular scroll speed (worse the taller the paragraphs are).
     const containerRect = scrollContainer.getBoundingClientRect();
     const elements = Array.from(article.querySelectorAll('[data-source-start]'));
-    
+
     let bestMatch: { rect: DOMRect; charStart: number; charEnd: number } | null = null;
-    let minDistance = Infinity;
-    
+    let fallback: { rect: DOMRect; charStart: number; charEnd: number } | null = null;
+    let fallbackDistance = Infinity;
+
     for (const el of elements) {
       const rect = el.getBoundingClientRect();
-      const distanceFromTop = Math.abs(rect.top - containerRect.top);
-      
-      // Only consider elements that are at or near the top of viewport
-      if (rect.top >= containerRect.top - 10 && distanceFromTop < minDistance) {
-        minDistance = distanceFromTop;
+
+      // Straddles the top edge — document order means the last match is the
+      // deepest/most specific one (inline span on the top visible line)
+      if (rect.top <= containerRect.top && rect.bottom > containerRect.top) {
         bestMatch = {
+          rect,
+          charStart: parseInt(el.getAttribute('data-source-start') || '0', 10),
+          charEnd: parseInt(el.getAttribute('data-source-end') || '0', 10),
+        };
+        continue;
+      }
+
+      // Nearest element below the edge — used when the edge sits in the gap
+      // between blocks
+      const distanceFromTop = rect.top - containerRect.top;
+      if (distanceFromTop >= 0 && distanceFromTop < fallbackDistance) {
+        fallbackDistance = distanceFromTop;
+        fallback = {
           rect,
           charStart: parseInt(el.getAttribute('data-source-start') || '0', 10),
           charEnd: parseInt(el.getAttribute('data-source-end') || '0', 10),
         };
       }
     }
+
+    if (!bestMatch) bestMatch = fallback;
     
     if (bestMatch !== null) {
       const { rect: topRect, charStart: topCharStart, charEnd: topCharEnd } = bestMatch;
