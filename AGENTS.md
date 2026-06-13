@@ -9,7 +9,21 @@ npm run dev        # Start dev server (port 5173)
 npm run build      # Production build
 npm run typecheck  # Type check
 npm run lint       # ESLint
+npm test           # Vitest unit/component tests (jsdom)
+npm run test:e2e   # Playwright E2E of critical workflows (auto-starts dev server)
 ```
+
+## Tests
+
+- **Unit/component** (`npm test`): Vitest + jsdom. Specs live next to source as
+  `src/**/*.test.ts(x)`. Cover the pure/critical logic — markdown→bionic render
+  pipeline, source-position math (click-to-navigate / scroll sync), gradient
+  color interpolation, and the `Slider` hit-area regression.
+- **E2E** (`npm run test:e2e`): Playwright (`e2e/*.spec.ts`), Chromium, on a
+  dedicated port (53117, never reuses an existing server). Covers the
+  interaction-heavy workflows that have regressed: render, click-to-navigate
+  without preview drift, preview drag-selection staying local, panel swap
+  exchanging widths, slider hit area, and editor→preview scroll sync.
 
 ---
 
