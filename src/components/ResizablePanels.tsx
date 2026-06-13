@@ -9,6 +9,8 @@ interface ResizablePanelsProps {
   minSize?: number;
   maxSize?: number;
   direction?: LayoutDirection;
+  /** Toggling this mirrors the split so each panel keeps its own size. */
+  swapped?: boolean;
 }
 
 export function ResizablePanels({
@@ -18,10 +20,22 @@ export function ResizablePanels({
   minSize = 20,
   maxSize = 80,
   direction = 'horizontal',
+  swapped = false,
 }: ResizablePanelsProps) {
   const [size, setSize] = useState(defaultSize);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // When the panels swap sides, mirror the split ratio too — swapping should
+  // exchange the panels wholesale, width included, not pour the contents
+  // into the other side's width.
+  const prevSwappedRef = useRef(swapped);
+  useEffect(() => {
+    if (prevSwappedRef.current !== swapped) {
+      prevSwappedRef.current = swapped;
+      setSize((s) => 100 - s);
+    }
+  }, [swapped]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

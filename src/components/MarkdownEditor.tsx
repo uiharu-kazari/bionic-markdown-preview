@@ -271,7 +271,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
 
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-900">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+      <div className="select-none flex items-center justify-between px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             {t.markdownEditor}

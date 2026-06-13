@@ -24,3 +24,7 @@ dist-ssr
 
 # MCP screenshots
 .playwright-mcp/
+
+# Test artifacts
+test-results/
+playwright-report/
