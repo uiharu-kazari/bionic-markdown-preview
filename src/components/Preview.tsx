@@ -154,14 +154,31 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     if (e.button === 0) isPreviewSelectingRef.current = true;
   }, []);
 
-  // The drag can end anywhere, so clear the selecting flag on a global mouseup.
+  // A preview drag-selection can be released anywhere — in the pane padding,
+  // or past the viewport edge during auto-scroll — so the reflect-to-editor
+  // must run on a global mouseup, not the <article>'s (which React won't fire
+  // when the release lands outside it). Only acts when the drag started in the
+  // preview (isPreviewSelectingRef) and produced a real, preview-contained
+  // selection (getSelectionSourceRange guards containment).
   useEffect(() => {
     const onUp = () => {
+      const wasSelecting = isPreviewSelectingRef.current;
       isPreviewSelectingRef.current = false;
+      if (!wasSelecting || !articleRef.current) return;
+
+      const selection = window.getSelection();
+      // Ignore collapsed / tiny selections (plain clicks, sub-pixel wobble) —
+      // the click handler treats those as navigation.
+      if (!selection || selection.isCollapsed || selection.toString().trim().length <= 2) return;
+
+      const range = getSelectionSourceRange(articleRef.current);
+      if (range && range.sourceEnd > range.sourceStart) {
+        setEditorSelection(range.sourceStart, range.sourceEnd);
+      }
     };
     window.addEventListener('mouseup', onUp);
     return () => window.removeEventListener('mouseup', onUp);
-  }, []);
+  }, [setEditorSelection]);
 
   // Handle click on preview → navigate to the cursor position in the editor.
   // Only a true click navigates; drag-selections stay local to the preview
@@ -200,22 +217,6 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
       navigateToEditorChar(charPos.sourceStart);
     }
   }, [navigateToEditorChar]);
-
-  // Reflect a preview drag-selection back to the editor: map the selected
-  // range to source characters and select them in the textarea (which then
-  // drives the preview highlight band). Runs on mouseup so the selection is
-  // final; a plain click has a collapsed selection and is ignored here.
-  const handlePreviewMouseUp = useCallback(() => {
-    if (!articleRef.current) return;
-    const selection = window.getSelection();
-    // Ignore collapsed / tiny selections (plain clicks, sub-pixel wobble) —
-    // the click handler treats those as navigation.
-    if (!selection || selection.isCollapsed || selection.toString().trim().length <= 2) return;
-    const range = getSelectionSourceRange(articleRef.current);
-    if (range && range.sourceEnd > range.sourceStart) {
-      setEditorSelection(range.sourceStart, range.sourceEnd);
-    }
-  }, [setEditorSelection]);
 
   // Sentence-level hover highlight (CSS Custom Highlight API — no DOM mutation)
   const sentenceHoverRef = useRef<SentenceHoverController | null>(null);
@@ -465,7 +466,6 @@ ${processedHtml}
         <article
           ref={articleRef}
           onMouseDown={handlePreviewMouseDown}
-          onMouseUp={handlePreviewMouseUp}
           onClick={handlePreviewClick}
           onMouseMove={handlePreviewMouseMove}
           onMouseLeave={handlePreviewMouseLeave}
