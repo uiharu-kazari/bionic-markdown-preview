@@ -78,6 +78,28 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   // Real-time cursor position from editor
   const [editorCursorPosition, setEditorCursorPosition] = useState<number | null>(null);
 
+  // Suppress editor → preview scroll sync until a programmatic editor scroll
+  // settles, so navigating/selecting from the preview doesn't bounce the
+  // preview pane back.
+  const suppressEditorSyncUntilSettled = useCallback((textarea: HTMLTextAreaElement) => {
+    suppressEditorSyncRef.current = true;
+    const myToken = ++navTokenRef.current;
+    const clearSuppress = () => {
+      textarea.removeEventListener('scrollend', clearSuppress);
+      // A newer navigation/selection has superseded this one — leave its
+      // suppression flag and timeout alone (avoids the stale-clear race).
+      if (navTokenRef.current !== myToken) return;
+      suppressEditorSyncRef.current = false;
+      if (suppressTimeoutRef.current) {
+        clearTimeout(suppressTimeoutRef.current);
+        suppressTimeoutRef.current = null;
+      }
+    };
+    textarea.addEventListener('scrollend', clearSuppress, { once: true });
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    suppressTimeoutRef.current = window.setTimeout(clearSuppress, 700);
+  }, []);
+
   // Set selection in editor (for preview → editor sync)
   const setEditorSelection = useCallback((start: number, end: number) => {
     const textarea = editorTextareaRef.current;
@@ -89,17 +111,18 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // Calculate scroll position for the selection start
     const line = getLineFromPosition(text, clampedStart);
-    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) ||
                        parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
     const scrollTop = (line - 1) * lineHeight - textarea.clientHeight / 3;
 
+    suppressEditorSyncUntilSettled(textarea);
     textarea.scrollTo({
       top: Math.max(0, scrollTop),
       behavior: 'smooth',
     });
 
-    // Focus and set selection
-    textarea.focus();
+    // Focus and set selection (preventScroll: the scrollTo above positions it)
+    textarea.focus({ preventScroll: true });
     textarea.setSelectionRange(clampedStart, clampedEnd);
 
     // Re-apply selection after React update cycle to avoid controlled component reset
@@ -112,7 +135,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setEditorHighlight({ charStart: savedStart, charEnd: savedEnd });
       setTimeout(() => setEditorHighlight(null), 1500);
     }, 0);
-  }, []);
+  }, [suppressEditorSyncUntilSettled]);
 
   // Content-based scroll sync: sync by finding which content is at viewport top
   const syncScrollFromEditor = useCallback(() => {
@@ -237,23 +260,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // Suppress editor → preview scroll sync until this navigation scroll
     // settles, so the preview panel doesn't jump when text is clicked in it.
-    suppressEditorSyncRef.current = true;
-    const myToken = ++navTokenRef.current;
-    const clearSuppress = () => {
-      // A newer navigation has taken over; leave its state untouched.
-      if (navTokenRef.current !== myToken) return;
-      suppressEditorSyncRef.current = false;
-      textarea.removeEventListener('scrollend', clearSuppress);
-      if (suppressTimeoutRef.current) {
-        clearTimeout(suppressTimeoutRef.current);
-        suppressTimeoutRef.current = null;
-      }
-    };
-    textarea.addEventListener('scrollend', clearSuppress, { once: true });
-    // Fallback for browsers without 'scrollend' (e.g. older Safari) or when
-    // the target position requires no scroll, so the flag can't get stuck.
-    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
-    suppressTimeoutRef.current = window.setTimeout(clearSuppress, 700);
+    suppressEditorSyncUntilSettled(textarea);
 
     textarea.scrollTo({
       top: Math.max(0, scrollTop),
@@ -275,7 +282,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // Briefly highlight the line containing the character
     setEditorHighlight({ charStart: lineStart, charEnd: lineEnd });
     setTimeout(() => setEditorHighlight(null), 1500);
-  }, []);
+  }, [suppressEditorSyncUntilSettled]);
 
   // Navigate to a specific character position in the preview
   const navigateToPreviewChar = useCallback((charPos: number) => {
