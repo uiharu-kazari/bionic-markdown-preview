@@ -361,11 +361,16 @@ ${processedHtml}
             color: color-mix(in srgb, currentColor calc(var(--bionic-dim-opacity, 1) * 100%), transparent);
           }
         }
+        /* Editor-selection mapping. A flat tint alone is easy to miss over the
+           gradient themes, so add a continuous bottom underline (inset shadow,
+           which joins across adjacent fragments — no per-word boxing). */
         .${SELECTION_HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.3) !important;
+          background-color: rgba(16, 185, 129, 0.45) !important;
+          box-shadow: inset 0 -2px 0 0 rgba(5, 150, 105, 0.9);
         }
         .dark .${SELECTION_HIGHLIGHT_CLASS} {
-          background-color: rgba(16, 185, 129, 0.4) !important;
+          background-color: rgba(16, 185, 129, 0.55) !important;
+          box-shadow: inset 0 -2px 0 0 rgba(52, 211, 153, 0.95);
         }
         .preview-cursor {
           display: inline-block;
