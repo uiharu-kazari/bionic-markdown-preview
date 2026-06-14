@@ -78,6 +78,24 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   // Real-time cursor position from editor
   const [editorCursorPosition, setEditorCursorPosition] = useState<number | null>(null);
 
+  // Suppress editor → preview scroll sync until a programmatic editor scroll
+  // settles, so navigating/selecting from the preview doesn't bounce the
+  // preview pane back.
+  const suppressEditorSyncUntilSettled = useCallback((textarea: HTMLTextAreaElement) => {
+    suppressEditorSyncRef.current = true;
+    const clearSuppress = () => {
+      suppressEditorSyncRef.current = false;
+      textarea.removeEventListener('scrollend', clearSuppress);
+      if (suppressTimeoutRef.current) {
+        clearTimeout(suppressTimeoutRef.current);
+        suppressTimeoutRef.current = null;
+      }
+    };
+    textarea.addEventListener('scrollend', clearSuppress, { once: true });
+    if (suppressTimeoutRef.current) clearTimeout(suppressTimeoutRef.current);
+    suppressTimeoutRef.current = window.setTimeout(clearSuppress, 700);
+  }, []);
+
   // Set selection in editor (for preview → editor sync)
   const setEditorSelection = useCallback((start: number, end: number) => {
     const textarea = editorTextareaRef.current;
@@ -89,17 +107,18 @@ export function EditorProvider({ children }: { children: ReactNode }) {
 
     // Calculate scroll position for the selection start
     const line = getLineFromPosition(text, clampedStart);
-    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) ||
                        parseFloat(getComputedStyle(textarea).fontSize) * 1.6;
     const scrollTop = (line - 1) * lineHeight - textarea.clientHeight / 3;
 
+    suppressEditorSyncUntilSettled(textarea);
     textarea.scrollTo({
       top: Math.max(0, scrollTop),
       behavior: 'smooth',
     });
 
-    // Focus and set selection
-    textarea.focus();
+    // Focus and set selection (preventScroll: the scrollTo above positions it)
+    textarea.focus({ preventScroll: true });
     textarea.setSelectionRange(clampedStart, clampedEnd);
 
     // Re-apply selection after React update cycle to avoid controlled component reset

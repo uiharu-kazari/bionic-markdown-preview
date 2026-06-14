@@ -52,13 +52,12 @@ test('clicking preview text navigates the editor without drifting the preview', 
   expect(Math.abs(cursor - expected)).toBeLessThan(160); // editor jumped to clicked text
 });
 
-test('drag-selecting preview text stays local (no editor navigation)', async ({ page }) => {
+test('drag-selecting preview text reflects the selection back to the editor', async ({ page }) => {
   await setMarkdown(page, PARAS.join('\n\n'));
   const target = page.locator('article p', { hasText: 'topic 10' }).first();
   await target.scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
 
-  const cur0 = (await page.evaluate(editorCursor())) as number;
   const pv0 = (await page.evaluate(previewScrollTop())) as number;
 
   const box = (await target.boundingBox())!;
@@ -66,16 +65,24 @@ test('drag-selecting preview text stays local (no editor navigation)', async ({ 
   await page.mouse.down();
   await page.mouse.move(box.x + 420, box.y + 10, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(700);
 
-  const selected = await page.evaluate(() => window.getSelection()!.toString());
-  expect(selected).toContain('begins with a sentence');
+  const previewSelected = await page.evaluate(() => window.getSelection()!.toString());
+  const editorSelected = await page.evaluate(() => {
+    const ta = document.querySelector('textarea') as HTMLTextAreaElement;
+    return ta.value.slice(ta.selectionStart, ta.selectionEnd);
+  });
 
-  expect(await page.evaluate(editorCursor())).toBe(cur0);
-  expect(await page.evaluate(previewScrollTop())).toBe(pv0);
+  // the editor now holds the same source text that was selected in the preview
+  expect(editorSelected.length).toBeGreaterThan(2);
+  expect(editorSelected).toContain('begins with a sentence');
+  // (sanity) the preview selection mapped to the same words
+  expect(previewSelected).toContain('begins with a sentence');
+  // reflecting must not bounce the preview pane
+  expect(Math.abs((await page.evaluate(previewScrollTop()) as number) - pv0)).toBeLessThanOrEqual(2);
 });
 
-test('drag-selecting past the viewport edge does not scroll the editor', async ({ page }) => {
+test('preview auto-scroll during a drag-selection does not scroll the editor mid-drag', async ({ page }) => {
   await setMarkdown(page, PARAS.join('\n\n'));
   const target = page.locator('article p', { hasText: 'topic 3' }).first();
   await target.scrollIntoViewIfNeeded();
@@ -85,6 +92,8 @@ test('drag-selecting past the viewport edge does not scroll the editor', async (
   const eds0 = (await page.evaluate(editorScroll())) as number;
 
   // Start a selection, then drag below the preview viewport so it auto-scrolls.
+  // The reflect-to-editor happens on mouseup; *during* the drag the editor must
+  // stay put (the auto-scroll must not sync into the editor).
   const box = (await target.boundingBox())!;
   const viewport = page.viewportSize()!;
   await page.mouse.move(box.x + 10, box.y + 5);
@@ -92,12 +101,9 @@ test('drag-selecting past the viewport edge does not scroll the editor', async (
   for (let i = 0; i < 6; i++) {
     await page.mouse.move(box.x + 200, viewport.height - 8, { steps: 4 });
     await page.waitForTimeout(120); // let auto-scroll tick
+    expect(await page.evaluate(editorScroll())).toBe(eds0); // unchanged mid-drag
   }
   await page.mouse.up();
-  await page.waitForTimeout(400);
-
-  // preview auto-scrolled, but the editor must not have followed the drag
-  expect(await page.evaluate(editorScroll())).toBe(eds0);
 });
 
 test('swapping panels exchanges the panels and their widths', async ({ page }) => {
