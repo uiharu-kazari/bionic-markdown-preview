@@ -4,6 +4,7 @@ import { processMarkdownToBionic } from '../utils/markdownProcessor';
 import { applyGradientReading, removeGradient, createGradientObserver } from '../utils/gradientReading';
 import {
   getCharacterPositionFromClick,
+  getSelectionSourceRange,
   SOURCE_CHAR_START_ATTR,
   insertCursorAtPosition,
   removeCursor,
@@ -58,6 +59,7 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     previewArticleRef,
     syncScrollFromPreview,
     navigateToEditorChar,
+    setEditorSelection,
     previewHighlight,
     editorCursorPosition,
   } = useEditorContext();
@@ -198,6 +200,22 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
       navigateToEditorChar(charPos.sourceStart);
     }
   }, [navigateToEditorChar]);
+
+  // Reflect a preview drag-selection back to the editor: map the selected
+  // range to source characters and select them in the textarea (which then
+  // drives the preview highlight band). Runs on mouseup so the selection is
+  // final; a plain click has a collapsed selection and is ignored here.
+  const handlePreviewMouseUp = useCallback(() => {
+    if (!articleRef.current) return;
+    const selection = window.getSelection();
+    // Ignore collapsed / tiny selections (plain clicks, sub-pixel wobble) —
+    // the click handler treats those as navigation.
+    if (!selection || selection.isCollapsed || selection.toString().trim().length <= 2) return;
+    const range = getSelectionSourceRange(articleRef.current);
+    if (range && range.sourceEnd > range.sourceStart) {
+      setEditorSelection(range.sourceStart, range.sourceEnd);
+    }
+  }, [setEditorSelection]);
 
   // Sentence-level hover highlight (CSS Custom Highlight API — no DOM mutation)
   const sentenceHoverRef = useRef<SentenceHoverController | null>(null);
@@ -361,16 +379,12 @@ ${processedHtml}
             color: color-mix(in srgb, currentColor calc(var(--bionic-dim-opacity, 1) * 100%), transparent);
           }
         }
-        /* Editor-selection mapping. A flat tint alone is easy to miss over the
-           gradient themes, so add a continuous bottom underline (inset shadow,
-           which joins across adjacent fragments — no per-word boxing). */
+        /* Editor↔preview selection mapping band. */
         .${SELECTION_HIGHLIGHT_CLASS} {
           background-color: rgba(16, 185, 129, 0.45) !important;
-          box-shadow: inset 0 -2px 0 0 rgba(5, 150, 105, 0.9);
         }
         .dark .${SELECTION_HIGHLIGHT_CLASS} {
           background-color: rgba(16, 185, 129, 0.55) !important;
-          box-shadow: inset 0 -2px 0 0 rgba(52, 211, 153, 0.95);
         }
         .preview-cursor {
           display: inline-block;
@@ -451,6 +465,7 @@ ${processedHtml}
         <article
           ref={articleRef}
           onMouseDown={handlePreviewMouseDown}
+          onMouseUp={handlePreviewMouseUp}
           onClick={handlePreviewClick}
           onMouseMove={handlePreviewMouseMove}
           onMouseLeave={handlePreviewMouseLeave}
