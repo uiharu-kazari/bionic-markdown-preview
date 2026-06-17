@@ -161,6 +161,57 @@ test('toolbar sliders respond across their full height (hit area)', async ({ pag
   expect(await value()).not.toBe(before);
 });
 
+// Selection effects (placing the caret, the editor→preview selection band, a
+// native drag-selection) mutate the live preview DOM. None of them may reflow
+// the surrounding text — the caret in particular is drawn out of flow for this
+// reason. Measure a trailing word's position before/after each effect.
+test('selection effects do not shift preview layout', async ({ page }) => {
+  const LINE = 'START alpha beta gamma delta epsilon zeta eta theta iota SENTINELWORD';
+  await setMarkdown(page, LINE);
+
+  const sentinel = () =>
+    page.evaluate(() => {
+      const p = document.querySelector('article p')!;
+      const spans = p.querySelectorAll('span[data-source-start]');
+      const r = (spans[spans.length - 1] as HTMLElement).getBoundingClientRect();
+      return { x: Math.round(r.x * 100) / 100, y: Math.round(r.y * 100) / 100 };
+    });
+
+  const p1 = page.locator('article p').first();
+  const b1 = (await p1.boundingBox())!;
+
+  // 1) place the caret near the start of the line
+  const before = await sentinel();
+  await page.mouse.click(b1.x + 30, b1.y + 8);
+  await page.waitForTimeout(300);
+  let after = await sentinel();
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+
+  // 2) editor→preview selection band
+  await page.evaluate(() => {
+    const ta = document.querySelector('textarea') as HTMLTextAreaElement;
+    ta.focus();
+    ta.setSelectionRange(0, 20);
+    ta.dispatchEvent(new Event('select', { bubbles: true }));
+  });
+  await page.waitForTimeout(400);
+  after = await sentinel();
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+
+  // 3) native drag-selection across the start of the line
+  await page.evaluate(() => (document.querySelector('textarea') as HTMLTextAreaElement).blur());
+  await page.mouse.move(b1.x + 5, b1.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(b1.x + 140, b1.y + 8, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  after = await sentinel();
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+});
+
 test('editor scroll syncs the preview proportionally and smoothly', async ({ page }) => {
   await setMarkdown(
     page,

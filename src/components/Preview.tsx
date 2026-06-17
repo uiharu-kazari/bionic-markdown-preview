@@ -387,18 +387,31 @@ ${processedHtml}
         .dark .${SELECTION_HIGHLIGHT_CLASS} {
           background-color: rgba(16, 185, 129, 0.55) !important;
         }
+        /* Zero-footprint caret: the inserted marker is a plain inline element
+           with no box of its own; the visible bar is painted by an
+           absolutely-positioned ::after. The old inline-block (width 2.5px,
+           height 1.15em) grew the line box and nudged glyphs sideways, so
+           clicking/placing the cursor visibly reflowed the text. Drawing the
+           bar out of flow keeps insertion/removal layout-neutral. */
         .preview-cursor {
-          display: inline-block;
+          display: inline;
+          position: relative;
+          width: 0;
+        }
+        .preview-cursor::after {
+          content: "";
+          position: absolute;
+          left: -1px;
+          top: 0;
           width: 2.5px;
           height: 1.15em;
           background-color: rgb(37, 99, 235);
-          vertical-align: text-bottom;
-          margin: 0 -1px;
-          animation: cursorBlink 1s step-end infinite;
           border-radius: 1px;
           box-shadow: 0 0 2px rgba(37, 99, 235, 0.5);
+          animation: cursorBlink 1s step-end infinite;
+          pointer-events: none;
         }
-        .dark .preview-cursor {
+        .dark .preview-cursor::after {
           background-color: rgb(96, 165, 250);
           box-shadow: 0 0 2px rgba(96, 165, 250, 0.5);
         }
