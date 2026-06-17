@@ -28,3 +28,6 @@ dist-ssr
 # Test artifacts
 test-results/
 playwright-report/
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/

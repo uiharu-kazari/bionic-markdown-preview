@@ -5,10 +5,16 @@ import {
   getColumnFromPosition,
   getPreviewElementsForCharRange,
   createMarkdownItWithSourceMap,
+  insertCursorAtPosition,
+  removeCursor,
+  applySelectionHighlight,
+  removeSelectionHighlight,
+  SELECTION_HIGHLIGHT_CLASS,
   SOURCE_CHAR_START_ATTR,
   SOURCE_CHAR_END_ATTR,
   SOURCE_LINE_ATTR,
 } from './sourceMapping';
+import { processMarkdownToBionic } from './markdownProcessor';
 
 // These pure position helpers underpin click-to-navigate and scroll sync —
 // the workflows that have repeatedly regressed. Lock the math down.
@@ -104,5 +110,82 @@ describe('getPreviewElementsForCharRange', () => {
     const root = document.createElement('div');
     root.innerHTML = `<p ${SOURCE_CHAR_START_ATTR}="0" ${SOURCE_CHAR_END_ATTR}="50">z</p>`;
     expect(getPreviewElementsForCharRange(root, 999, 1000)).toEqual([]);
+  });
+});
+
+// The cursor and selection highlight mutate the live preview DOM. The bug they
+// caused was layout-affecting: the marker DOM lingered or text nodes were left
+// split, so the preview visibly shifted. These lock the contract that every
+// "selection effect" fully reverts the DOM (same text, no marker residue) — the
+// data-integrity half of "selection effects must not affect layout". The pixel
+// half (the caret no longer growing the line box) is covered in the e2e suite.
+function bionicRoot(markdown: string): HTMLElement {
+  const root = document.createElement('div');
+  root.innerHTML = processMarkdownToBionic(markdown, {
+    enabled: true,
+    fixationPoint: 3,
+    highlightTag: 'b',
+    highlightClass: '',
+  });
+  return root;
+}
+
+describe('cursor insert/remove is layout-neutral', () => {
+  it('inserts a single caret marker and removes it cleanly', () => {
+    const root = bionicRoot('The quick brown fox jumps.');
+    const before = root.textContent;
+
+    const inserted = insertCursorAtPosition(root, 8); // inside "quick"
+    expect(inserted).toBe(true);
+    expect(root.querySelectorAll('.preview-cursor').length).toBe(1);
+    // the caret is a content-less marker — it must not add visible characters
+    expect(root.textContent).toBe(before);
+
+    removeCursor(root);
+    expect(root.querySelector('.preview-cursor')).toBeNull();
+    expect(root.textContent).toBe(before);
+  });
+
+  it('removeCursor merges the text node it split (no fragmentation residue)', () => {
+    const root = bionicRoot('information density');
+    insertCursorAtPosition(root, 5);
+    removeCursor(root);
+    // round-trips back to the exact pre-cursor markup
+    const fresh = bionicRoot('information density');
+    expect(root.innerHTML).toBe(fresh.innerHTML);
+  });
+
+  it('removeCursor is a no-op when there is no cursor', () => {
+    const root = bionicRoot('plain text');
+    const html = root.innerHTML;
+    expect(() => removeCursor(root)).not.toThrow();
+    expect(root.innerHTML).toBe(html);
+  });
+});
+
+describe('selection highlight apply/remove is layout-neutral', () => {
+  it('wraps the selected range and fully unwraps it', () => {
+    const root = bionicRoot('alpha beta gamma delta');
+    const before = root.textContent;
+    const beforeHtml = root.innerHTML;
+
+    applySelectionHighlight(root, 6, 10); // "beta"
+    expect(root.querySelectorAll(`.${SELECTION_HIGHLIGHT_CLASS}`).length).toBeGreaterThan(0);
+    // highlighting only paints a background — the text content is unchanged
+    expect(root.textContent).toBe(before);
+
+    removeSelectionHighlight(root);
+    expect(root.querySelectorAll(`.${SELECTION_HIGHLIGHT_CLASS}`).length).toBe(0);
+    expect(root.textContent).toBe(before);
+    // and the DOM is byte-for-byte what it was before the selection
+    expect(root.innerHTML).toBe(beforeHtml);
+  });
+
+  it('does nothing for an empty/inverted range', () => {
+    const root = bionicRoot('alpha beta');
+    const html = root.innerHTML;
+    applySelectionHighlight(root, 5, 5);
+    expect(root.querySelectorAll(`.${SELECTION_HIGHLIGHT_CLASS}`).length).toBe(0);
+    expect(root.innerHTML).toBe(html);
   });
 });
