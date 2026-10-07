@@ -9,15 +9,16 @@ import {
   SOURCE_CHAR_END_ATTR,
   SOURCE_TEXT_ATTR,
 } from './sourceMapping';
-import { extractMath, restoreMath } from './mathProcessor';
+import { installMathParsing, restoreMath, type MathBlock } from './mathProcessor';
 
 const md = createMarkdownItWithSourceMap();
+installMathParsing(md);
 
 export function renderMarkdown(content: string): string {
-  // Extract math expressions before markdown parsing
-  const { processed, mathBlocks } = extractMath(content);
-
-  const rawHtml = md.render(processed);
+  // Parse the original source so math cannot shift navigation offsets or
+  // rewrite Markdown destinations, titles, and code before parsing.
+  const mathBlocks: MathBlock[] = [];
+  const rawHtml = md.render(content, { mathBlocks });
   const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
     ALLOWED_TAGS: [
       'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -53,7 +54,9 @@ export function applyBionicReading(
 
   const skipTags = new Set(['CODE', 'PRE', 'A', 'SCRIPT', 'STYLE']);
   const skipClasses = ['katex', 'math-inline', 'math-display'];
-  const highlightTag = options.highlightTag.toUpperCase();
+  const tag = ['b', 'strong', 'mark', 'span'].includes(options.highlightTag)
+    ? options.highlightTag : 'b';
+  const highlightTag = tag.toUpperCase();
 
   function processNode(node: Node): void {
     if (node.nodeType === Node.TEXT_NODE && node.textContent) {
@@ -64,13 +67,43 @@ export function applyBionicReading(
 
       const text = node.textContent;
       if (text.trim()) {
+        // textVide still chooses the emphasized prefixes, but its result is
+        // plain text with private markers. Never parse decoded text as HTML.
+        let marker = '\u0000BIONIC';
+        while (text.includes(marker)) marker += '_';
+        const open = `${marker}OPEN\u0000`;
+        const close = `${marker}CLOSE\u0000`;
         const bionicText = textVide(text, {
-          sep: [`<${options.highlightTag}${options.highlightClass ? ` class="${options.highlightClass}"` : ''}>`, `</${options.highlightTag}>`],
+          sep: [open, close],
           fixationPoint: 6 - options.fixationPoint,
+          ignoreHtmlTag: false,
+          ignoreHtmlEntity: false,
         });
 
         const wrapper = document.createElement('span');
-        wrapper.innerHTML = bionicText;
+        let position = 0;
+        while (position < bionicText.length) {
+          const next = bionicText.indexOf(open, position);
+          if (next === -1) {
+            wrapper.append(document.createTextNode(bionicText.slice(position)));
+            break;
+          }
+          wrapper.append(document.createTextNode(bionicText.slice(position, next)));
+          const end = bionicText.indexOf(close, next + open.length);
+          const emphasis = document.createElement(tag);
+          if (options.highlightClass) emphasis.className = options.highlightClass;
+          let emphasized = bionicText.slice(next + open.length, end);
+          position = end + close.length;
+          // text-vide counts UTF-16 units. Keep an astral letter together if
+          // its calculated prefix ends between the surrogate pair.
+          const last = emphasized.charCodeAt(emphasized.length - 1);
+          const following = bionicText.charCodeAt(position);
+          if (last >= 0xD800 && last <= 0xDBFF && following >= 0xDC00 && following <= 0xDFFF) {
+            emphasized += bionicText[position++];
+          }
+          emphasis.textContent = emphasized;
+          wrapper.append(emphasis);
+        }
 
         // Preserve source mapping attributes from parent span
         if (parent?.tagName === 'SPAN') {

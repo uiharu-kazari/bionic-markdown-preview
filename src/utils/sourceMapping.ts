@@ -127,6 +127,7 @@ export function createMarkdownItWithSourceMap(): MarkdownIt {
         
         // Update current position for inline text tracking
         state.currentLineStart = startChar;
+        state.searchPosition = Math.max(state.searchPosition, startChar);
       }
     }
     return attrs;

@@ -37,7 +37,7 @@ export function ResizablePanels({
     }
   }, [swapped]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
@@ -46,7 +46,7 @@ export function ResizablePanels({
     setIsDragging(false);
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: PointerEvent) => {
     if (!isDragging || !containerRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
@@ -64,15 +64,17 @@ export function ResizablePanels({
 
   useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('pointermove', handleMouseMove);
+      document.addEventListener('pointerup', handleMouseUp);
+      document.addEventListener('pointercancel', handleMouseUp);
       document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
       document.body.style.userSelect = 'none';
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handleMouseMove);
+      document.removeEventListener('pointerup', handleMouseUp);
+      document.removeEventListener('pointercancel', handleMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
@@ -100,7 +102,22 @@ export function ResizablePanels({
           transition-colors group
           ${isDragging ? 'bg-emerald-500 dark:bg-emerald-500' : ''}
         `}
-        onMouseDown={handleMouseDown}
+        role="separator"
+        tabIndex={0}
+        aria-label="Resize editor and preview"
+        aria-orientation={isHorizontal ? 'vertical' : 'horizontal'}
+        aria-valuemin={minSize}
+        aria-valuemax={maxSize}
+        aria-valuenow={Math.round(size)}
+        style={{ touchAction: 'none' }}
+        onPointerDown={handleMouseDown}
+        onKeyDown={(e) => {
+          const decrease = isHorizontal ? 'ArrowLeft' : 'ArrowUp';
+          const increase = isHorizontal ? 'ArrowRight' : 'ArrowDown';
+          if (![decrease, increase, 'Home', 'End'].includes(e.key)) return;
+          e.preventDefault();
+          setSize(current => e.key === 'Home' ? minSize : e.key === 'End' ? maxSize : Math.min(maxSize, Math.max(minSize, current + (e.key === increase ? 5 : -5))));
+        }}
       >
         <div className={`
           absolute z-10 p-1 rounded bg-slate-300 dark:bg-slate-500 group-hover:bg-emerald-500

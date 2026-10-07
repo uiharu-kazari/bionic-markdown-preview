@@ -156,3 +156,12 @@
     line-height: var(--prose-line-height, 1.6);
   }
 }
+
+/* Keyboard focus stays visible on compact icon controls. */
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, [role="separator"]:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

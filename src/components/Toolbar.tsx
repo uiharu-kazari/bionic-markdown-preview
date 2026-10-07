@@ -94,6 +94,7 @@ export function Toolbar({
               onChange={(e) => onBionicOptionsChange({ fixationPoint: Number(e.target.value) })}
               className="w-20 h-1.5 rounded-lg cursor-pointer flex-shrink-0"
               title={`${t.leading}: ${bionicOptions.fixationPoint}`}
+          aria-label={`${t.leading}: ${bionicOptions.fixationPoint}`}
             />
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-4">{bionicOptions.fixationPoint}</span>
           </div>
@@ -107,6 +108,7 @@ export function Toolbar({
               onChange={(e) => onBionicOptionsChange({ dimOpacity: Number(e.target.value) })}
               className="w-16 h-1.5 rounded-lg cursor-pointer flex-shrink-0"
               title={`${t.opacity}: ${bionicOptions.dimOpacity}%`}
+          aria-label={`${t.opacity}: ${bionicOptions.dimOpacity}%`}
             />
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-6">{bionicOptions.dimOpacity}%</span>
           </div>
@@ -145,6 +147,7 @@ export function Toolbar({
               onChange={(e) => onEditorSettingsChange({ fontSize: Number(e.target.value) })}
               className="w-16 h-1.5 rounded-lg cursor-pointer flex-shrink-0"
               title={`${t.size}: ${editorSettings.fontSize}px`}
+          aria-label={`${t.size}: ${editorSettings.fontSize}px`}
             />
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-6">{editorSettings.fontSize}</span>
           </div>
@@ -160,6 +163,7 @@ export function Toolbar({
             onChange={(e) => onEditorSettingsChange({ lineHeight: Number(e.target.value) })}
             className="w-14 h-1.5 rounded-lg cursor-pointer flex-shrink-0"
             title={`${t.lineHeight}: ${editorSettings.lineHeight}`}
+          aria-label={`${t.lineHeight}: ${editorSettings.lineHeight}`}
           />
           <span className="text-xs font-medium text-slate-600 dark:text-slate-300 w-6">{editorSettings.lineHeight}</span>
         </div>
@@ -170,6 +174,7 @@ export function Toolbar({
           onClick={onLayoutToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           title={editorSettings.layout === 'horizontal' ? t.layoutVertical : t.layoutHorizontal}
+          aria-label={editorSettings.layout === 'horizontal' ? t.layoutVertical : t.layoutHorizontal}
         >
           {editorSettings.layout === 'horizontal' ? (
             <Columns className="w-4 h-4" />
@@ -185,6 +190,7 @@ export function Toolbar({
               : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
           }`}
           title={t.swapPanels}
+          aria-label={t.swapPanels}
         >
           <ArrowLeftRight className="w-4 h-4" />
         </button>
@@ -196,6 +202,7 @@ export function Toolbar({
               : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
           }`}
           title={previewOnly ? t.exitPreviewOnly : t.previewOnly}
+          aria-label={previewOnly ? t.exitPreviewOnly : t.previewOnly}
         >
           {previewOnly ? (
             <Minimize2 className="w-4 h-4" />
@@ -207,6 +214,7 @@ export function Toolbar({
           onClick={onThemeToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           title={t.toggleTheme}
+          aria-label={t.toggleTheme}
         >
           {editorSettings.theme === 'dark' ? (
             <Sun className="w-4 h-4" />
@@ -224,6 +232,7 @@ export function Toolbar({
           onClick={onLayoutToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           title={editorSettings.layout === 'horizontal' ? t.layoutVertical : t.layoutHorizontal}
+          aria-label={editorSettings.layout === 'horizontal' ? t.layoutVertical : t.layoutHorizontal}
         >
           {editorSettings.layout === 'horizontal' ? (
             <Columns className="w-5 h-5" />
@@ -240,6 +249,7 @@ export function Toolbar({
               : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
           }`}
           title={t.swapPanels}
+          aria-label={t.swapPanels}
         >
           <ArrowLeftRight className="w-5 h-5" />
         </button>
@@ -252,6 +262,7 @@ export function Toolbar({
               : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
           }`}
           title={previewOnly ? t.exitPreviewOnly : t.previewOnly}
+          aria-label={previewOnly ? t.exitPreviewOnly : t.previewOnly}
         >
           {previewOnly ? (
             <Minimize2 className="w-5 h-5" />
@@ -264,6 +275,7 @@ export function Toolbar({
           onClick={onThemeToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           title={t.toggleTheme}
+          aria-label={t.toggleTheme}
         >
           {editorSettings.theme === 'dark' ? (
             <Sun className="w-5 h-5" />
@@ -276,6 +288,7 @@ export function Toolbar({
           onClick={onSettingsToggle}
           className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           title={t.settings}
+          aria-label={t.settings}
         >
           <Settings className="w-5 h-5" />
         </button>

@@ -6,6 +6,7 @@ import {
   Preview,
   ResizablePanels,
 } from './components';
+import { isBionicOptions, isEditorSettings, isGradientOptions, isMarkdown } from './utils/settingsValidation';
 import { useSessionStorage } from './hooks/useSessionStorage';
 import { loadGoogleFont, ALL_FONTS } from './utils/fonts';
 import { useLanguage } from './contexts/LanguageContext';
@@ -45,12 +46,14 @@ function isDefaultContent(content: string): boolean {
 
 function App() {
   const { language } = useLanguage();
-  const [markdown, setMarkdown] = useSessionStorage('enhanced-md-content', defaultMarkdown[detectLanguage()]);
-  const [bionicOptions, setBionicOptions] = useSessionStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS);
-  const [gradientOptions, setGradientOptions] = useSessionStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS);
-  const [editorSettings, setEditorSettings] = useSessionStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS);
+  const [markdown, setMarkdown] = useSessionStorage('enhanced-md-content', defaultMarkdown[detectLanguage()], isMarkdown);
+  const [bionicOptions, setBionicOptions] = useSessionStorage('enhanced-md-highlight', DEFAULT_BIONIC_OPTIONS, isBionicOptions);
+  const [gradientOptions, setGradientOptions] = useSessionStorage('enhanced-md-gradient', DEFAULT_GRADIENT_OPTIONS, isGradientOptions);
+  const [editorSettings, setEditorSettings] = useSessionStorage('enhanced-md-settings', DEFAULT_EDITOR_SETTINGS, isEditorSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewOnly, setPreviewOnly] = useState(false);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const prevLanguageRef = useRef(language);
 
   useEffect(() => {
@@ -131,7 +134,7 @@ function App() {
 
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-900">
+    <div className="h-screen h-[100dvh] flex flex-col bg-slate-100 dark:bg-slate-900">
       <Toolbar
         bionicOptions={bionicOptions}
         gradientOptions={gradientOptions}
@@ -140,7 +143,7 @@ function App() {
         onBionicOptionsChange={handleBionicOptionsChange}
         onGradientOptionsChange={handleGradientOptionsChange}
         onEditorSettingsChange={handleEditorSettingsChange}
-        onSettingsToggle={() => setSettingsOpen(true)}
+        onSettingsToggle={openSettings}
         onThemeToggle={handleThemeToggle}
         onLayoutToggle={handleLayoutToggle}
         onSwapPanels={handleSwapPanels}
@@ -206,7 +209,7 @@ function App() {
         bionicOptions={bionicOptions}
         gradientOptions={gradientOptions}
         editorSettings={editorSettings}
-        onClose={() => setSettingsOpen(false)}
+        onClose={closeSettings}
         onBionicOptionsChange={handleBionicOptionsChange}
         onGradientOptionsChange={handleGradientOptionsChange}
         onEditorSettingsChange={handleEditorSettingsChange}

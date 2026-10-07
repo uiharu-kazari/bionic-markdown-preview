@@ -14,7 +14,9 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 } } },
   ],
   webServer: {
-    command: 'npm run dev -- --port 53117 --strictPort',
+    command: process.env.BIONIC_PRODUCTION_CHECK
+      ? 'npm run preview -- --port 53117 --strictPort'
+      : 'npm run dev -- --port 53117 --strictPort',
     url: 'http://localhost:53117',
     reuseExistingServer: false,
     timeout: 60_000,

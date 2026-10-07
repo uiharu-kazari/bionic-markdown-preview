@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 import { X, ALargeSmall, AlignJustify, Globe, Github, Code, Chrome, Heart, ExternalLink } from 'lucide-react';
 import type { BionicOptions, EditorSettings, GradientOptions, GradientTheme } from '../types';
 import { ALL_FONTS, loadGoogleFont, getFontFamilyCSS } from '../utils/fonts';
@@ -38,6 +40,9 @@ export function SettingsPanel({
   const { t, language, setLanguage } = useLanguage();
   const languages: Language[] = ['en', 'zh', 'fr', 'ja'];
 
+  const panelRef = useRef<HTMLElement>(null);
+  useDialogFocus(panelRef, isOpen, onClose);
+
   if (!isOpen) return null;
 
   const handlePreviewFontChange = (fontFamily: string) => {
@@ -59,11 +64,12 @@ export function SettingsPanel({
         className="fixed inset-0 bg-black/50 z-40"
         onClick={onClose}
       />
-      <aside className="fixed right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-800 shadow-xl z-50 overflow-y-auto">
+      <aside ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} className="fixed right-0 top-0 bottom-0 w-80 max-w-full bg-white dark:bg-slate-800 shadow-xl z-50 overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{t.settings}</h2>
+          <h2 id="settings-title" className="text-lg font-semibold text-slate-800 dark:text-white">{t.settings}</h2>
           <button
             onClick={onClose}
+            aria-label={t.settings + ": close"}
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
@@ -87,6 +93,7 @@ export function SettingsPanel({
                   </span>
                 </label>
                 <Slider
+                  aria-label={t.leading}
                   min={1}
                   max={5}
                   value={bionicOptions.fixationPoint}
@@ -109,6 +116,7 @@ export function SettingsPanel({
                   </span>
                 </label>
                 <Slider
+                  aria-label={t.opacity}
                   min={0}
                   max={100}
                   value={bionicOptions.dimOpacity}
@@ -135,6 +143,7 @@ export function SettingsPanel({
                 {t.gradient}
               </label>
               <select
+                aria-label={t.gradient}
                 value={gradientOptions.theme}
                 onChange={(e) => onGradientOptionsChange({ theme: e.target.value as GradientTheme })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -164,6 +173,7 @@ export function SettingsPanel({
                   {t.font}
                 </label>
                 <select
+                  aria-label={t.font}
                   value={getCurrentPreviewFont()}
                   onChange={(e) => handlePreviewFontChange(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -197,6 +207,7 @@ export function SettingsPanel({
                   </span>
                 </label>
                 <Slider
+                  aria-label={t.size}
                   min={12}
                   max={24}
                   value={editorSettings.fontSize}
@@ -216,6 +227,7 @@ export function SettingsPanel({
                   </span>
                 </label>
                 <Slider
+                  aria-label={t.lineHeight}
                   min={1.2}
                   max={2}
                   step={0.1}
@@ -243,6 +255,7 @@ export function SettingsPanel({
                   <button
                     key={lang}
                     onClick={() => setLanguage(lang)}
+                    aria-pressed={isSelected}
                     className={`
                       flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium text-sm transition-all
                       ${isSelected

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, ReactNode } from 'react';
 import { Language, Translations, translations, detectLanguage } from '../i18n/translations';
 
 interface LanguageContextType {
@@ -9,21 +9,14 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
+import { useSessionStorage } from '../hooks/useSessionStorage';
+
+const isLanguage = (value: unknown): value is Language => typeof value === 'string' && ['en', 'zh', 'fr', 'ja'].includes(value);
+
 const STORAGE_KEY = 'bionic-markdown-language';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored && ['en', 'zh', 'fr', 'ja'].includes(stored)) {
-      return stored as Language;
-    }
-    return detectLanguage();
-  });
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    sessionStorage.setItem(STORAGE_KEY, lang);
-  };
+  const [language, setLanguage] = useSessionStorage(STORAGE_KEY, detectLanguage(), isLanguage);
 
   useEffect(() => {
     document.documentElement.lang = language;

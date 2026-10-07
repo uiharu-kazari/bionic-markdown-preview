@@ -57,8 +57,10 @@ export function GradientThemeSelector({ value, onChange, compact = false }: Grad
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" onKeyDown={(e) => { if (e.key === "Escape") { setIsOpen(false); containerRef.current?.querySelector("button")?.focus(); } }}>
       <button
+        aria-label={`${t.gradient}: ${getThemeName(currentTheme)}`}
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className={`
           flex items-center gap-2 rounded-lg transition-colors
@@ -83,6 +85,7 @@ export function GradientThemeSelector({ value, onChange, compact = false }: Grad
               return (
                 <button
                   key={theme.id}
+                  aria-pressed={isSelected}
                   onClick={() => {
                     onChange(theme.id);
                     setIsOpen(false);

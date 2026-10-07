@@ -394,16 +394,16 @@ export function detectLanguage(): Language {
 export const defaultMarkdown: Record<Language, string> = {
   en: `# Welcome to Bionic Markdown Preview
 
-This editor combines **Markdown** editing with Bionic preview to help you read faster and with better focus.
+Edit **Markdown** and try a reading style with adjustable word emphasis.
 
 ## What is Bionic Preview?
 
-Bionic preview guides the eyes through text by emphasizing the **initial letters** of words. This helps your brain complete words faster, resulting in:
+Bionic preview emphasizes the **initial letters** of words. Reading preferences differ: compare highlighting on and off to find what feels comfortable.
 
-- Faster reading speeds
-- Better comprehension
-- Reduced eye strain
-- Improved focus
+- Adjustable emphasis
+- Optional gradient colors
+- Custom fonts and spacing
+- A plain preview when highlighting is off
 
 ## How to Use
 
@@ -453,16 +453,16 @@ Start editing to see the magic happen!
 
   zh: `# 欢迎使用 Bionic Markdown 预览
 
-本编辑器将 **Markdown** 编辑与 Bionic 预览相结合，帮助您更快、更专注地阅读。
+编辑 **Markdown**，体验可调整单词强调程度的阅读样式。
 
 ## 什么是 Bionic 预览？
 
-Bionic 预览通过强调单词的**首字母**来引导眼睛浏览文本。这有助于大脑更快地完成单词识别，从而实现：
+Bionic 预览强调单词的**开头部分**。阅读偏好因人而异，请比较开启与关闭强调的效果，选择舒适的样式。
 
-- 更快的阅读速度
-- 更好的理解力
-- 减少眼睛疲劳
-- 提高专注力
+- 可调整的强调程度
+- 可选渐变颜色
+- 自定义字体与间距
+- 关闭强调后显示普通预览
 
 ## 如何使用
 
@@ -512,16 +512,16 @@ function greet(name) {
 
   fr: `# Bienvenue dans Apercu Bionic Markdown
 
-Cet editeur combine l'edition **Markdown** avec l'apercu Bionic pour vous aider a lire plus vite et avec une meilleure concentration.
+Modifiez du **Markdown** et essayez un style de lecture avec une accentuation ajustable.
 
 ## Qu'est-ce que l'apercu Bionic ?
 
-L'apercu Bionic guide les yeux a travers le texte en mettant en valeur les **premieres lettres** des mots. Cela aide votre cerveau a completer les mots plus rapidement, ce qui permet :
+L'apercu Bionic met en valeur les **premieres lettres** des mots. Les preferences de lecture varient : comparez les modes avec et sans accentuation.
 
-- Une lecture plus rapide
-- Une meilleure comprehension
-- Moins de fatigue oculaire
-- Une concentration amelioree
+- Accentuation ajustable
+- Degrades de couleur facultatifs
+- Polices et espacement personnalisables
+- Apercu classique sans accentuation
 
 ## Comment utiliser
 
@@ -571,16 +571,16 @@ Commencez a editer pour voir la magie operer !
 
   ja: `# Bionic Markdown プレビューへようこそ
 
-このエディタは **Markdown** 編集と Bionic プレビューを組み合わせて、より速く、より集中して読むことを支援します。
+**Markdown** を編集し、単語の強調を調整できる読書スタイルを試せます。
 
 ## Bionic プレビューとは？
 
-Bionic プレビューは、単語の**最初の文字**を強調することで、目がテキストを追いやすくします。これにより脳が単語をより速く認識でき、以下の効果が得られます：
+Bionic プレビューは単語の**最初の文字**を強調します。読みやすさの好みは人によって異なります。強調のオン・オフを比較して、快適な表示を選んでください。
 
-- より速い読書速度
-- より良い理解力
-- 目の疲労軽減
-- 集中力の向上
+- 強調度の調整
+- 任意のグラデーションカラー
+- フォントと行間の変更
+- 強調をオフにした通常のプレビュー
 
 ## 使い方
 

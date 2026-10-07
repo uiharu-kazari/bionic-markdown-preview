@@ -2,7 +2,7 @@
   "name": "bionic-markdown",
   "private": true,
   "version": "1.0.0",
-  "description": "A productivity tool for previewing Markdown with bold text highlighting for faster, more focused reading",
+  "description": "A Markdown reader with adjustable word emphasis, gradients and mathematical notation",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,12 +18,10 @@
     "test:cypress": "start-server-and-test \"vite --port 5180 --strictPort\" http://localhost:5180 \"cypress run\""
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "@tailwindcss/typography": "^0.5.19",
     "@types/dompurify": "^3.0.5",
     "@types/markdown-it": "^14.1.2",
     "dompurify": "^3.3.1",
-    "katex": "^0.16.33",
+    "katex": "^0.19.0",
     "lucide-react": "^0.344.0",
     "markdown-it": "^14.1.0",
     "react": "^18.3.1",
@@ -33,15 +31,17 @@
   "devDependencies": {
     "@eslint/js": "^9.9.1",
     "@playwright/test": "^1.60.0",
+    "@tailwindcss/typography": "^0.5.20",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/katex": "^0.16.8",
+    "@types/node": "^24.19.1",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.4.18",
     "cypress": "^15.17.0",
-    "eslint": "^9.9.1",
+    "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
@@ -51,7 +51,14 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
-    "vite": "^5.4.2",
+    "vite": "^8.3.3",
     "vitest": "^4.1.8"
+  },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "overrides": {
+    "picomatch@^2.3.1": "2.3.2",
+    "postcss-selector-parser": "7.1.6"
   }
 }

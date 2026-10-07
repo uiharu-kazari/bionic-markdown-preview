@@ -72,9 +72,24 @@ export function EditorProvider({ children }: { children: ReactNode }) {
   const navTokenRef = useRef(0);
   
   // Highlight state for both panels (character-based)
-  const [editorHighlight, setEditorHighlight] = useState<CharacterHighlight | null>(null);
-  const [previewHighlight, setPreviewHighlight] = useState<CharacterHighlight | null>(null);
+  const [editorHighlight, setEditorHighlightState] = useState<CharacterHighlight | null>(null);
+  const [previewHighlight, setPreviewHighlightState] = useState<CharacterHighlight | null>(null);
   
+  // Native selectionchange can repeat without changing the range. Preserve
+  // state identity so an unchanged selection does not rerender both panels.
+  const setEditorHighlight = useCallback((highlight: CharacterHighlight | null) => {
+    setEditorHighlightState(previous =>
+      previous?.charStart === highlight?.charStart && previous?.charEnd === highlight?.charEnd
+        ? previous : highlight
+    );
+  }, []);
+  const setPreviewHighlight = useCallback((highlight: CharacterHighlight | null) => {
+    setPreviewHighlightState(previous =>
+      previous?.charStart === highlight?.charStart && previous?.charEnd === highlight?.charEnd
+        ? previous : highlight
+    );
+  }, []);
+
   // Real-time cursor position from editor
   const [editorCursorPosition, setEditorCursorPosition] = useState<number | null>(null);
 
@@ -135,7 +150,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       setEditorHighlight({ charStart: savedStart, charEnd: savedEnd });
       setTimeout(() => setEditorHighlight(null), 1500);
     }, 0);
-  }, [suppressEditorSyncUntilSettled]);
+  }, [suppressEditorSyncUntilSettled, setEditorHighlight]);
 
   // Content-based scroll sync: sync by finding which content is at viewport top
   const syncScrollFromEditor = useCallback(() => {
@@ -282,7 +297,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     // Briefly highlight the line containing the character
     setEditorHighlight({ charStart: lineStart, charEnd: lineEnd });
     setTimeout(() => setEditorHighlight(null), 1500);
-  }, [suppressEditorSyncUntilSettled]);
+  }, [suppressEditorSyncUntilSettled, setEditorHighlight]);
 
   // Navigate to a specific character position in the preview
   const navigateToPreviewChar = useCallback((charPos: number) => {
@@ -308,7 +323,7 @@ export function EditorProvider({ children }: { children: ReactNode }) {
       }
       setTimeout(() => setPreviewHighlight(null), 1500);
     }
-  }, []);
+  }, [setPreviewHighlight]);
 
   // Legacy line navigation - converts to character position
   const navigateToEditorLine = useCallback((line: number) => {

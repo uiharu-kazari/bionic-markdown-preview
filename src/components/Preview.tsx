@@ -18,6 +18,8 @@ import {
   type SentenceHoverController,
 } from '../utils/sentenceHover';
 import { useEditorContext } from '../contexts/EditorContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { createHtmlExport } from '../utils/htmlExport';
 import { useDebounce } from '../hooks/useDebounce';
 import type { BionicOptions, EditorSettings, GradientOptions } from '../types';
 
@@ -64,6 +66,9 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     editorCursorPosition,
   } = useEditorContext();
   const [copySuccess, setCopySuccess] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const { language } = useLanguage();
 
   // Memoize HTML processing without dimOpacity - opacity is applied via CSS variable
   const processedHtml = useMemo(() => {
@@ -307,63 +312,40 @@ export function Preview({ markdown, bionicOptions, gradientOptions, settings, on
     };
   }, [editorCursorPosition, previewHighlight, processedHtml]);
 
+  const exportHtml = useCallback(async () => {
+    if (!articleRef.current) throw new Error('Preview is unavailable.');
+    return createHtmlExport(articleRef.current, settings, bionicOptions.dimOpacity, language);
+  }, [settings, bionicOptions.dimOpacity, language]);
+
   const handleCopyHtml = useCallback(async () => {
+    setExporting(true);
     try {
-      await navigator.clipboard.writeText(processedHtml);
+      await navigator.clipboard.writeText(await exportHtml());
       setCopySuccess(true);
+      setExportStatus('HTML copied.');
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
-      console.error('Failed to copy HTML');
-    }
-  }, [processedHtml]);
+      setExportStatus('Copy failed. Try downloading HTML instead.');
+    } finally { setExporting(false); }
+  }, [exportHtml]);
 
-  const handleDownloadHtml = useCallback(() => {
-    const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BionicMarkdown Export</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      line-height: 1.6;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
-      color: #1e293b;
-    }
-    h1, h2, h3, h4, h5, h6 { font-weight: bold; margin-top: 1.5em; }
-    h1 { font-size: 2em; }
-    h2 { font-size: 1.5em; }
-    h3 { font-size: 1.25em; }
-    p { margin: 1em 0; }
-    code { background: #f1f5f9; padding: 0.2em 0.4em; border-radius: 4px; font-size: 0.9em; }
-    pre { background: #0f172a; color: #e2e8f0; padding: 1em; border-radius: 8px; overflow-x: auto; }
-    pre code { background: transparent; padding: 0; }
-    blockquote { border-left: 4px solid #10b981; margin: 1em 0; padding-left: 1em; font-style: italic; color: #64748b; }
-    a { color: #10b981; }
-    ul, ol { margin: 1em 0; padding-left: 2em; }
-    hr { border: none; border-top: 1px solid #e2e8f0; margin: 2em 0; }
-    .br-emph { font-weight: 700; }
-    .br-rest { font-weight: 400; }
-  </style>
-</head>
-<body>
-${processedHtml}
-</body>
-</html>`;
-
-    const blob = new Blob([fullHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'bionic-markdown-export.html';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [processedHtml]);
+  const handleDownloadHtml = useCallback(async () => {
+    setExporting(true);
+    try {
+      const blob = new Blob([await exportHtml()], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bionic-markdown-export.html';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setExportStatus('HTML downloaded.');
+    } catch {
+      setExportStatus('Export failed. Check your connection and try again.');
+    } finally { setExporting(false); }
+  }, [exportHtml]);
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800 relative">
@@ -439,6 +421,8 @@ ${processedHtml}
           </span>
           <Tooltip text={copySuccess ? 'Copied!' : 'Copy HTML'}>
             <button
+              aria-label={copySuccess ? "HTML copied" : "Copy HTML"}
+              disabled={exporting}
               onClick={handleCopyHtml}
               className={`p-1.5 rounded transition-colors ${
                 copySuccess
@@ -451,6 +435,8 @@ ${processedHtml}
           </Tooltip>
           <Tooltip text="Download HTML">
             <button
+              aria-label="Download HTML"
+              disabled={exporting}
               onClick={handleDownloadHtml}
               className="p-1.5 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
             >
@@ -459,6 +445,8 @@ ${processedHtml}
           </Tooltip>
           <Tooltip text={bionicOptions.enabled ? 'Disable Bionic Markdown Preview' : 'Enable Bionic Markdown Preview'}>
             <button
+              aria-label="Bionic highlighting"
+              aria-pressed={bionicOptions.enabled}
               onClick={onBionicToggle}
               className={`p-1.5 rounded transition-all duration-200 ${
                 bionicOptions.enabled
@@ -471,6 +459,7 @@ ${processedHtml}
           </Tooltip>
         </div>
       </div>
+      <span role="status" className="text-xs px-4 text-slate-600 dark:text-slate-300">{exportStatus}</span>
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}

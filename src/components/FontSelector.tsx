@@ -17,10 +17,11 @@ export function FontSelector({ value, onChange }: FontSelectorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     GOOGLE_FONTS.forEach(font => loadGoogleFont(font.family));
     const timer = setTimeout(() => setFontsLoaded(true), 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -50,6 +51,7 @@ export function FontSelector({ value, onChange }: FontSelectorProps) {
     return (
       <button
         key={font.family}
+        aria-pressed={isSelected}
         onClick={() => handleSelect(font)}
         className={`
           w-full flex items-center justify-between px-3 py-2 text-left transition-colors
@@ -67,8 +69,10 @@ export function FontSelector({ value, onChange }: FontSelectorProps) {
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" onKeyDown={(e) => { if (e.key === "Escape") { setIsOpen(false); containerRef.current?.querySelector("button")?.focus(); } }}>
       <button
+        aria-label={`Font: ${currentFontName}`}
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors w-[140px]"
       >

@@ -29,7 +29,7 @@ npm run test:e2e   # Playwright E2E of critical workflows (auto-starts dev serve
 
 ## Project Overview
 
-**Bionic Markdown Preview** is a React/TypeScript editor that renders Markdown with "Bionic Reading" emphasis—bolding the initial portions of words to guide the eye for faster reading. It also supports optional gradient coloring for visual line tracking.
+**Bionic Markdown Preview** is a React/TypeScript editor that renders Markdown with "Bionic Reading" emphasis—bolding the initial portions of words to provide an adjustable reading appearance. It also supports optional gradient coloring for visual line tracking.
 
 **Core Features:**
 - Split-pane editor with synchronized scrolling
@@ -37,7 +37,7 @@ npm run test:e2e   # Playwright E2E of critical workflows (auto-starts dev serve
 - Gradient reading with per-line color interpolation
 - Dark/light theme support
 - i18n support (EN, ZH, FR, JA)
-- Persistent settings via localStorage
+- Validated settings via tab-scoped sessionStorage
 - HTML export (copy/download)
 
 ---
@@ -83,7 +83,7 @@ applyGradientReading() ← GradientOptions (post-render, DOM-based)
 ### Key Processing Steps
 
 1. **Markdown → HTML**: `markdown-it` parses Markdown with typographer, linkify, and line breaks enabled
-2. **Sanitization**: DOMPurify allows only safe HTML tags/attributes
+2. **Sanitization**: DOMPurify allows only safe HTML tags/attributes. Markdown-aware math tokens retain original source offsets; trusted-generated KaTeX HTML and MathML are restored into text nodes only, with `trust: false`.
 3. **Bionic Transform**: `text-vide` wraps initial word portions in `<b>` tags; non-bold text gets dimmed via opacity
 4. **Gradient Coloring**: After render, walks the DOM to wrap emphasized text nodes in `<span>` elements with per-word HSL colors based on line position
 
@@ -91,7 +91,7 @@ applyGradientReading() ← GradientOptions (post-render, DOM-based)
 
 ## State Management
 
-All application state lives in `App.tsx` using the `useLocalStorage` hook:
+All application state lives in `App.tsx` using the `useSessionStorage` hook:
 
 | State | Storage Key | Type | Purpose |
 |-------|-------------|------|---------|
@@ -294,10 +294,7 @@ The Preview component has `handleCopyHtml` and `handleDownloadHtml`. To add new 
 
 1. Parse HTML with `DOMParser`
 2. Walk text nodes (skip CODE, PRE, A, SCRIPT, STYLE)
-3. Call `text-vide()` which:
-   - Splits words
-   - Calculates fixation point (portion to bold)
-   - Wraps in configured tag
+3. Call `text-vide()` with plain markers to calculate emphasis, then create safe DOM text and emphasis nodes. Never reparse decoded text as HTML.
 4. Apply dimming opacity to non-emphasized text
 5. Serialize back to HTML string
 
@@ -352,7 +349,6 @@ Enables bidirectional navigation and selection sync between editor and preview w
 | `dompurify` | HTML sanitization | XSS prevention |
 | `lucide-react` | Icons | UI icons |
 | `@tailwindcss/typography` | Prose styling | Preview article styles |
-| `@supabase/supabase-js` | (Unused currently) | Future backend integration |
 
 ---
 
@@ -380,3 +376,7 @@ Enables bidirectional navigation and selection sync between editor and preview w
 - **Selection highlight auto-clears**: Preview highlights clear when editor loses focus
 - **Markdown syntax stripped for mapping**: Bold markers (**), headings (#), etc. are handled correctly in position calculations
 - **Editor text wrapping**: Text wraps in the editor (pre-wrap) and line numbers dynamically adjust height to match wrapped lines using `useLineHeights` hook with ResizeObserver
+
+## Runtime and release verification
+
+Use Node ^22.12 or >=24 (this workspace has Node 24.4.0). Vite 8 uses Rolldown code splitting for React and math. Export lives in `utils/htmlExport.ts`: full document, visible styles, embedded WOFF2 math fonts; optional remote fonts/images remain network-dependent. Run `npm run test:cypress` for the second browser engine. `e2e/release.spec.ts` additionally checks focus, same-tab recovery, safe/offline export, and keyboard resizing. Session storage survives reloads in the same tab, not tab closure. Public pushes and deployment require the user's explicit publication approval.

@@ -105,3 +105,18 @@ describe('restoreMath', () => {
     }
   });
 });
+
+describe('safe placeholder restoration', () => {
+  it('does not substitute a placeholder in attributes or code', () => {
+    const { mathBlocks } = extractMath('$x$');
+    const id = mathBlocks[0].id;
+    const html = restoreMath(`<a href="/${id}" title="${id}" data-source-text="${id}">link</a><code>${id}</code><p>${id}</p>`, mathBlocks);
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    expect(root.querySelector('a')?.getAttribute('href')).toBe(`/${id}`);
+    expect(root.querySelector('a')?.getAttribute('title')).toBe(id);
+    expect(root.querySelector('a')?.getAttribute('data-source-text')).toBe(id);
+    expect(root.querySelector('code')?.textContent).toBe(id);
+    expect(root.querySelectorAll('.katex')).toHaveLength(1);
+  });
+});

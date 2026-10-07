@@ -16,6 +16,7 @@ function useLineHeights(
 ): number[] {
   const [lineHeights, setLineHeights] = useState<number[]>([]);
   const measureRef = useRef<HTMLDivElement | null>(null);
+  const lastMeasuredHeightsRef = useRef<number[]>([]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -62,7 +63,11 @@ function useLineHeights(
         heights.push(measureRef.current.offsetHeight);
       }
       
-      setLineHeights(heights);
+      const previous = lastMeasuredHeightsRef.current;
+      if (previous.length !== heights.length || previous.some((height, index) => height !== heights[index])) {
+        lastMeasuredHeightsRef.current = heights;
+        setLineHeights(heights);
+      }
     };
 
     // Calculate initially
@@ -116,6 +121,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const { 
     editorScrollRef, 
     editorTextareaRef,
@@ -150,7 +156,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
   }, [onChange]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab') {
+    if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault();
       const target = e.target as HTMLTextAreaElement;
       const start = target.selectionStart;
@@ -174,9 +180,10 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
     try {
       await navigator.clipboard.writeText(value);
       setCopySuccess(true);
+      setCopyError(false);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
-      console.error('Failed to copy markdown');
+      setCopyError(true);
     }
   }, [value]);
 
@@ -278,6 +285,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
           </span>
           <Tooltip text={copySuccess ? t.copied : t.copyMarkdown}>
             <button
+              aria-label={copySuccess ? t.copied : t.copyMarkdown}
               onClick={handleCopyMarkdown}
               className={`p-1.5 rounded transition-colors ${
                 copySuccess
@@ -290,6 +298,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
           </Tooltip>
           <Tooltip text={t.resetEditor}>
             <button
+              aria-label={t.resetEditor}
               onClick={handleReset}
               className="p-1.5 rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
@@ -301,6 +310,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
           {lineCount} {t.lines} | {value.length} {t.chars}
         </span>
       </div>
+      {copyError && <span role="status" className="text-xs px-4 text-slate-600 dark:text-slate-300">Copy failed. Select the text and copy it with your keyboard.</span>}
       <div ref={editorContainerRef} className="flex-1 flex overflow-hidden relative">
         <div
           ref={lineNumbersRef}
@@ -338,6 +348,7 @@ export function MarkdownEditor({ value, onChange, settings }: MarkdownEditorProp
         </div>
         <textarea
           ref={textareaRef}
+          aria-label={t.markdownEditor}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
