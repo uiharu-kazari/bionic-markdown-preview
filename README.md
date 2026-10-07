@@ -2,7 +2,9 @@
 
 A Markdown editor with adjustable word emphasis, optional gradients, and a plain preview for comparison.
 
-**Live at [bionicmarkdown.com](https://bionicmarkdown.com)**
+**Latest release: [Cloudflare-hosted app](https://bionic-markdown-preview.xucgphi.workers.dev)**
+
+The original [bionicmarkdown.com](https://bionicmarkdown.com) domain remains on Bolt hosting until its DNS migration is completed.
 
 ## Also Available On
 
@@ -94,3 +96,22 @@ Reading preferences vary; speed, comprehension, and health benefits have not bee
 ## Release review
 
 The 2026-10-08 candidate was checked with 117 unit/component tests, 12 Chromium workflows against both development and production builds, and 5 Electron/Cypress regressions. The audit report records the remaining development-only advisories and platform limits: [PRODUCT-ENGINEERING-AUDIT-2026-10-08.md](docs/PRODUCT-ENGINEERING-AUDIT-2026-10-08.md).
+
+## Hosting
+
+The reviewed build is published as static assets on Cloudflare Workers Free. No database, Functions, or custom server script is required. Cloudflare documents static asset requests as free and unlimited: https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/.
+
+```sh
+npm run build
+npx wrangler@4 deploy --config wrangler.jsonc
+```
+
+Use the explicit configuration: it uploads only `dist/`. Do not publish the source/project directory as static assets. The existing authenticated account owns `bionic-markdown-preview.xucgphi.workers.dev`. Future GitHub pushes do not automatically deploy this manual hosting configuration.
+
+To check the real deployment:
+
+```sh
+BIONIC_LIVE_URL=https://bionic-markdown-preview.xucgphi.workers.dev npm run test:e2e
+```
+
+Connecting bionicmarkdown.com requires its Spaceship DNS/registrar access and Cloudflare zone-management access. The original Bolt domain must stay available until the Cloudflare custom domain is serving the verified release over HTTPS. Preserve all existing DNS records, including mail records, before changing nameservers. No domain transfer or paid hosting plan is needed for this static app.
