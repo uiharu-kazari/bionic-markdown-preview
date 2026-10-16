@@ -118,7 +118,8 @@ BIONIC_LIVE_URL=https://www.bionicmarkdown.com npm run test:e2e
 
 Spaceship remains the authoritative DNS provider. The `www` CNAME points to
 `bionic-markdown-preview.pages.dev`; the root domain uses Spaceship's free HTTPS
-URL redirect to `https://www.bionicmarkdown.com`. Keep the Spaceship nameservers,
+URL redirect to `https://www.bionicmarkdown.com/`. The trailing slash preserves
+page paths and query parameters. Keep the Spaceship nameservers,
 DNSSEC, MX, SPF, ownership verification records, and existing email forwarding.
 No domain transfer or paid hosting plan is needed. Cloudflare's subdomain setup
 supports external DNS: https://developers.cloudflare.com/pages/configuration/custom-domains/.
