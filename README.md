@@ -2,9 +2,9 @@
 
 A Markdown editor with adjustable word emphasis, optional gradients, and a plain preview for comparison.
 
-**Latest release: [Cloudflare-hosted app](https://bionic-markdown-preview.xucgphi.workers.dev)**
+**Latest release: [bionicmarkdown.com](https://www.bionicmarkdown.com/)**
 
-The original [bionicmarkdown.com](https://bionicmarkdown.com) domain remains on Bolt hosting until its DNS migration is completed.
+Hosted on Cloudflare Pages Free. DNS and email forwarding stay with Spaceship.
 
 ## Also Available On
 
@@ -99,19 +99,31 @@ The 2026-10-08 candidate was checked with 117 unit/component tests, 12 Chromium 
 
 ## Hosting
 
-The reviewed build is published as static assets on Cloudflare Workers Free. No database, Functions, or custom server script is required. Cloudflare documents static asset requests as free and unlimited: https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/.
+The production site uses Cloudflare Pages Free at https://www.bionicmarkdown.com/,
+with https://bionic-markdown-preview.pages.dev as its fallback address. This is a
+static app: no database, Functions, or custom server script is required.
 
 ```sh
 npm run build
-npx wrangler@4 deploy --config wrangler.jsonc
+npx wrangler@4.148.0 pages deploy --branch main
 ```
 
-Use the explicit configuration: it uploads only `dist/`. Do not publish the source/project directory as static assets. The existing authenticated account owns `bionic-markdown-preview.xucgphi.workers.dev`. Future GitHub pushes do not automatically deploy this manual hosting configuration.
-
-To check the real deployment:
+The explicit Pages configuration uploads only `dist/`. Never upload the source
+or project directory as static assets. GitHub pushes do not automatically deploy
+this manually managed project.
 
 ```sh
-BIONIC_LIVE_URL=https://bionic-markdown-preview.xucgphi.workers.dev npm run test:e2e
+BIONIC_LIVE_URL=https://www.bionicmarkdown.com npm run test:e2e
 ```
 
-Connecting bionicmarkdown.com requires its Spaceship DNS/registrar access and Cloudflare zone-management access. The original Bolt domain must stay available until the Cloudflare custom domain is serving the verified release over HTTPS. Preserve all existing DNS records, including mail records, before changing nameservers. No domain transfer or paid hosting plan is needed for this static app.
+Spaceship remains the authoritative DNS provider. The `www` CNAME points to
+`bionic-markdown-preview.pages.dev`; the root domain uses Spaceship's free HTTPS
+URL redirect to `https://www.bionicmarkdown.com`. Keep the Spaceship nameservers,
+DNSSEC, MX, SPF, ownership verification records, and existing email forwarding.
+No domain transfer or paid hosting plan is needed. Cloudflare's subdomain setup
+supports external DNS: https://developers.cloudflare.com/pages/configuration/custom-domains/.
+
+The earlier Workers deployment remains a fallback at
+https://bionic-markdown-preview.xucgphi.workers.dev. Its independent configuration
+is `wrangler.worker.jsonc` (`wrangler deploy --config wrangler.worker.jsonc`); deploying Pages does not update that Worker. Leave the old
+Bolt deployment intact until DNS caches have expired after migration.
