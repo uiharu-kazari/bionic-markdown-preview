@@ -54,19 +54,14 @@ export function Toolbar({
     <>
       <header className="select-none flex items-center px-3 min-[1440px]:px-4 py-2 min-[1440px]:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm overflow-visible relative z-20">
       <div className="flex items-center gap-2 min-[1440px]:gap-3 min-w-0 overflow-hidden relative z-0">
-        {/* Bionic Icon - inverted colors for header */}
-        <svg 
-          className="w-6 h-6 min-[1440px]:w-7 min-[1440px]:h-7 flex-shrink-0" 
-          viewBox="0 0 16 16" 
-          fill="none" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect width="16" height="16" rx="4" className="fill-slate-100 dark:fill-slate-700"/>
-          <rect x="4" y="3" width="2" height="10" fill="#10b981"/>
-          <rect x="8" y="4" width="4" height="2" fill="#10b981"/>
-          <rect x="8" y="7" width="3" height="2" fill="#10b981"/>
-          <rect x="8" y="10" width="5" height="2" fill="#10b981"/>
-        </svg>
+        <img
+          src="/brand.svg"
+          alt=""
+          aria-hidden="true"
+          width="36"
+          height="36"
+          className="w-8 h-8 min-[1440px]:w-9 min-[1440px]:h-9 flex-shrink-0"
+        />
         <h1 className="text-base min-[1440px]:text-xl font-extrabold tracking-tight truncate">
           <span className="hidden sm:inline">
             <span className="text-emerald-500">Bio</span>
