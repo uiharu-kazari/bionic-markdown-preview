@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
 import { textVide } from 'text-vide';
+import { cjkFragments, hasSpacelessScript } from './cjkEmphasis';
 import type { BionicOptions } from '../types';
 import {
   createMarkdownItWithSourceMap,
@@ -67,43 +68,60 @@ export function applyBionicReading(
 
       const text = node.textContent;
       if (text.trim()) {
-        // textVide still chooses the emphasized prefixes, but its result is
-        // plain text with private markers. Never parse decoded text as HTML.
-        let marker = '\u0000BIONIC';
-        while (text.includes(marker)) marker += '_';
-        const open = `${marker}OPEN\u0000`;
-        const close = `${marker}CLOSE\u0000`;
-        const bionicText = textVide(text, {
-          sep: [open, close],
-          fixationPoint: 6 - options.fixationPoint,
-          ignoreHtmlTag: false,
-          ignoreHtmlEntity: false,
-        });
-
         const wrapper = document.createElement('span');
-        let position = 0;
-        while (position < bionicText.length) {
-          const next = bionicText.indexOf(open, position);
-          if (next === -1) {
-            wrapper.append(document.createTextNode(bionicText.slice(position)));
-            break;
+        const appendTextVide = (text: string) => {
+          // textVide still chooses the emphasized prefixes, but its result is
+          // plain text with private markers. Never parse decoded text as HTML.
+          let marker = '\u0000BIONIC';
+          while (text.includes(marker)) marker += '_';
+          const open = `${marker}OPEN\u0000`;
+          const close = `${marker}CLOSE\u0000`;
+          const bionicText = textVide(text, {
+            sep: [open, close],
+            fixationPoint: 6 - options.fixationPoint,
+            ignoreHtmlTag: false,
+            ignoreHtmlEntity: false,
+          });
+
+          let position = 0;
+          while (position < bionicText.length) {
+            const next = bionicText.indexOf(open, position);
+            if (next === -1) {
+              wrapper.append(document.createTextNode(bionicText.slice(position)));
+              break;
+            }
+            wrapper.append(document.createTextNode(bionicText.slice(position, next)));
+            const end = bionicText.indexOf(close, next + open.length);
+            const emphasis = document.createElement(tag);
+            if (options.highlightClass) emphasis.className = options.highlightClass;
+            let emphasized = bionicText.slice(next + open.length, end);
+            position = end + close.length;
+            // text-vide counts UTF-16 units. Keep an astral letter together if
+            // its calculated prefix ends between the surrogate pair.
+            const last = emphasized.charCodeAt(emphasized.length - 1);
+            const following = bionicText.charCodeAt(position);
+            if (last >= 0xD800 && last <= 0xDBFF && following >= 0xDC00 && following <= 0xDFFF) {
+              emphasized += bionicText[position++];
+            }
+            emphasis.textContent = emphasized;
+            wrapper.append(emphasis);
           }
-          wrapper.append(document.createTextNode(bionicText.slice(position, next)));
-          const end = bionicText.indexOf(close, next + open.length);
-          const emphasis = document.createElement(tag);
-          if (options.highlightClass) emphasis.className = options.highlightClass;
-          let emphasized = bionicText.slice(next + open.length, end);
-          position = end + close.length;
-          // text-vide counts UTF-16 units. Keep an astral letter together if
-          // its calculated prefix ends between the surrogate pair.
-          const last = emphasized.charCodeAt(emphasized.length - 1);
-          const following = bionicText.charCodeAt(position);
-          if (last >= 0xD800 && last <= 0xDBFF && following >= 0xDC00 && following <= 0xDFFF) {
-            emphasized += bionicText[position++];
+        };
+        // Chinese/Japanese runs use script-aware rules; everything else keeps text-vide.
+        let buffer = '';
+        for (const token of text.split(/(\s+)/)) {
+          if (!token || !hasSpacelessScript(token)) { buffer += token; continue; }
+          if (buffer) { appendTextVide(buffer); buffer = ''; }
+          for (const fragment of cjkFragments(token, options.fixationPoint)) {
+            if (fragment.kind === 'plain') { wrapper.append(document.createTextNode(fragment.text)); continue; }
+            const element = document.createElement(fragment.kind === 'bold' ? tag : 'span');
+            if (fragment.kind === 'bold' && options.highlightClass) element.className = options.highlightClass;
+            if (fragment.kind === 'dim') element.className = 'bionic-dim';
+            element.textContent = fragment.text;
+            wrapper.append(element);
           }
-          emphasis.textContent = emphasized;
-          wrapper.append(emphasis);
         }
+        if (buffer) appendTextVide(buffer);
 
         // Preserve source mapping attributes from parent span
         if (parent?.tagName === 'SPAN') {

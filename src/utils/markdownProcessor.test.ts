@@ -265,3 +265,31 @@ describe('math in surrounding prose', () => {
     expect(root.querySelectorAll('.katex')).toHaveLength(1);
   });
 });
+
+describe('applyBionicReading — script-aware CJK emphasis', () => {
+  const text = (html: string) => new DOMParser().parseFromString(html, 'text/html').body.textContent;
+
+  it('emphasizes kanji and dims hiragana grammar in Japanese', () => {
+    const out = applyBionicReading('<p>日本語の文章を</p>', bionic);
+    expect(out).toContain('<b>日本語</b><span class="bionic-dim">の</span><b>文章</b><span class="bionic-dim">を</span>');
+    expect(text(out)).toBe('日本語の文章を');
+  });
+
+  it('dims Chinese grammatical characters but keeps negation', () => {
+    const out = applyBionicReading('<p>细节的不同</p>', bionic);
+    expect(out).toContain('<span class="bionic-dim">的</span>');
+    expect(out).toContain('<b>不</b>');
+  });
+
+  it('keeps text-vide for English words around CJK text', () => {
+    const out = applyBionicReading('<p>reading 文章を reading</p>', bionic);
+    expect(text(out)).toBe('reading 文章を reading');
+    expect(out).toContain('<b>文章</b>');
+    expect((out.match(/<b>rea/g) || []).length).toBe(2);
+  });
+
+  it('never parses CJK text as HTML', () => {
+    const out = applyBionicReading('<p>文章&lt;img src=x onerror=alert(1)&gt;</p>', bionic);
+    expect(out).not.toContain('<img');
+  });
+});
