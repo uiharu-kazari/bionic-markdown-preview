@@ -124,7 +124,15 @@ DNSSEC, MX, SPF, ownership verification records, and existing email forwarding.
 No domain transfer or paid hosting plan is needed. Cloudflare's subdomain setup
 supports external DNS: https://developers.cloudflare.com/pages/configuration/custom-domains/.
 
-The earlier Workers deployment remains a fallback at
-https://bionic-markdown-preview.xucgphi.workers.dev. Its independent configuration
-is `wrangler.worker.jsonc` (`wrangler deploy --config wrangler.worker.jsonc`); deploying Pages does not update that Worker. Leave the old
-Bolt deployment intact until DNS caches have expired after migration.
+The earlier Workers address at
+https://bionic-markdown-preview.xucgphi.workers.dev uses a dedicated permanent
+redirect to `https://www.bionicmarkdown.com`, preserving paths and query strings.
+Its independent configuration is `wrangler.worker.jsonc`
+(`npx wrangler@4.148.0 deploy --config wrangler.worker.jsonc`); deploying Pages
+does not update that Worker. No app assets are uploaded to the redirect Worker.
+
+`public/robots.txt` permits crawling and advertises `public/sitemap.xml`, which
+lists only the canonical homepage and About page. After deploying Pages, submit
+`https://www.bionicmarkdown.com/sitemap.xml` in the domain's Search Console
+Sitemaps report. Keep the existing canonical validation running; do not restart
+it solely because a deployment completed. Google chooses when to recrawl.

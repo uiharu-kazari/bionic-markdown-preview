@@ -1,9 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bionic-markdown-preview",
+  "main": "workers/legacy-redirect.js",
   "compatibility_date": "2026-10-07",
-  "workers_dev": true,
-  "assets": {
-    "directory": "./dist"
-  }
+  "workers_dev": true
 }
